@@ -1,0 +1,5 @@
+CREATE TABLE iq_memory_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    kategori VARCHAR(50) NOT NULL,
+    kata VARCHAR(100) NOT NULL
+);

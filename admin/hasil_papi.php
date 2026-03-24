@@ -2,183 +2,188 @@
 require_once '../backend/config.php';
 include '../backend/auth_check.php';
 
-$nip = mysqli_real_escape_string($conn, $_GET['nip']);
+$query = "SELECT u.nama, u.satuan_kerja, h.* 
+          FROM hasil_papi h 
+          JOIN users u ON h.nip = u.nip
+          WHERE u.role = 'peserta'
+          ORDER BY u.nama ASC";
+$result = mysqli_query($conn, $query);
+$rows   = [];
+while ($r = mysqli_fetch_assoc($result)) $rows[] = $r;
 
-// Ambil data hasil PAPI dan Profil User
-$query = "SELECT u.nama, h.* FROM hasil_papi h 
-          JOIN users u ON h.nip = u.nip 
-          WHERE h.nip = '$nip' LIMIT 1";
-$res = mysqli_query($conn, $query);
-$data = mysqli_fetch_assoc($res);
-
-if (!$data) {
-    die("Data hasil PAPI tidak ditemukan.");
-}
-
-// Pengelompokan Dimensi
 $roles = [
-    'G' => 'Hard Intense Worked', 'L' => 'Leadership Role', 'I' => 'Ease in Decision Making',
-    'T' => 'Theoretical Type', 'V' => 'Vigorous Type', 'S' => 'Social Adability',
-    'R' => 'Self-Conditioning', 'D' => 'Interest in Details', 'C' => 'Organized Type', 'E' => 'Emotional Restraint'
+    'G'=>'Hard Intense Worked','L'=>'Leadership Role','I'=>'Ease in Decision Making',
+    'T'=>'Theoretical Type','V'=>'Vigorous Type','S'=>'Social Adability',
+    'R'=>'Self-Conditioning','D'=>'Interest in Details','C'=>'Organized Type','E'=>'Emotional Restraint'
 ];
-
 $needs = [
-    'N' => 'Need to Finish a Task', 'A' => 'Need to Achieve', 'P' => 'Need to Control Others',
-    'X' => 'Need to be Noticed', 'B' => 'Need to Belong to Groups', 'O' => 'Need for Closeness',
-    'Z' => 'Need for Change', 'K' => 'Need to be Forceful', 'F' => 'Need to Support Authority', 'W' => 'Need for Rules and Supervision'
+    'N'=>'Need to Finish a Task','A'=>'Need to Achieve','P'=>'Need to Control Others',
+    'X'=>'Need to be Noticed','B'=>'Need to Belong to Groups','O'=>'Need for Closeness',
+    'Z'=>'Need for Change','K'=>'Need to be Forceful','F'=>'Need to Support Authority','W'=>'Need for Rules and Supervision'
 ];
 ?>
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Hasil PAPI - <?= htmlspecialchars($data['nama']) ?></title>
-    <link rel="stylesheet" href="admin-style.css">
+    <title>Hasil Tes 2 Bagian 2 | Admin PETA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Plus Jakarta Sans','sans-serif']},colors:{navy:{DEFAULT:'#0F1E3C'}}}}}</script>
     <style>
-        .papi-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; margin-top: 20px; }
-        .chart-container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
-        .user-profile-card { 
-            background: linear-gradient(135deg, #00a2e9 0%, #007bb5 100%); 
-            color: white; padding: 25px; border-radius: 12px; margin-bottom: 25px;
-        }
-        .user-profile-card h2 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
-        .user-profile-card p { margin: 5px 0 0; opacity: 0.9; font-size: 16px; }
-        .table-skor { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .table-skor th, .table-skor td { border: 1px solid #eee; padding: 10px; text-align: left; font-size: 14px; }
-        .table-skor th { background-color: #fcfcfc; color: #555; }
-        .dimensi-code { font-weight: bold; color: #00a2e9; width: 45px; text-align: center; }
-        .score-value { text-align: center; font-weight: bold; width: 50px; background: #f9f9f9; }
+        body{font-family:'Plus Jakarta Sans',sans-serif;}
+        ::-webkit-scrollbar{width:6px;height:6px;}
+        ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:10px;}
     </style>
 </head>
-<body>
+<body class="bg-slate-100 flex min-h-screen">
 
-<div class="sidebar">
-    <div class="sidebar-logo">
-        <img src="../images/logobps.png" alt="BPS">
-        <span>Admin Panel</span>
-    </div>
-    <nav>
-        <a href="index.php" class="<?= ($current_page == 'index.php') ? 'active' : '' ?>">Dashboard</a>
-        <a href="status_pegawai.php">Status Pegawai</a>
-        <a href="kelola_soal.php">Kelola Soal</a>
-        <a href="hasil_peserta.php" class="active">Hasil Tes</a>
-        <a href="../logout.php">Logout</a>
-    </nav>
-</div>
+<?php include 'includes/sidebar.php'; ?>
 
-<div class="main-content">
-    <div class="user-profile-card">
-        <p>Laporan Hasil Evaluasi Individu</p>
-        <h2><?= htmlspecialchars($data['nama']) ?></h2>
-        <p>NIP: <?= htmlspecialchars($data['nip']) ?> | Tanggal Tes: <?= date('d F Y', strtotime($data['tanggal_tes'])) ?></p>
+<div class="ml-[260px] flex-1 p-8">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6 pb-6 border-b border-slate-200">
+        <div>
+            <h1 class="text-2xl font-extrabold text-navy tracking-tight">Hasil Tes 2</h1>
+            <p class="text-slate-500 text-sm mt-1">Laporan evaluasi tes 2 individu bagian 2.</p>
+        </div>
+        <a href="hasil_peserta.php"
+           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 transition-colors">
+            ← Kembali
+        </a>
     </div>
 
-    <div class="papi-grid">
-        <div class="chart-container">
-            <h3 style="margin-bottom: 20px; text-align: center; color: #333;">Profil Kepribadian (Radar)</h3>
-            <canvas id="papiRadarChart"></canvas>
+    <?php if (empty($rows)): ?>
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-16 text-center text-slate-400">
+        <div class="text-5xl mb-4">📭</div>
+        <p class="text-sm">Belum ada peserta yang menyelesaikan tes.</p>
+    </div>
+    <?php else: ?>
+
+    <div class="space-y-6" id="grid">
+    <?php foreach ($rows as $idx => $p): ?>
+    <div class="card" data-s="<?= strtolower($p['nama'].' '.$p['nip'].' '.($p['satuan_kerja']??'')) ?>">
+
+        <!-- Profile banner -->
+        <div class="relative bg-gradient-to-r from-[#0F1E3C] to-[#1E3260] text-white rounded-t-2xl px-6 py-5 overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-white/5"></div>
+            <div class="absolute -right-4 -bottom-8 w-32 h-32 rounded-full bg-white/5"></div>
+            <p class="text-xs font-bold uppercase tracking-widest text-blue-300 mb-1">Laporan Hasil Evaluasi Individu</p>
+            <h2 class="text-xl font-extrabold uppercase tracking-tight"><?= htmlspecialchars($p['nama']) ?></h2>
+            <div class="flex items-center gap-4 mt-2 text-sm text-blue-200">
+                <span>NIP: <?= $p['nip'] ?></span>
+                <span class="w-1 h-1 rounded-full bg-blue-400"></span>
+                <span><?= htmlspecialchars($p['satuan_kerja'] ?? '-') ?></span>
+                <?php if (!empty($p['tanggal_tes'])): ?>
+                <span class="w-1 h-1 rounded-full bg-blue-400"></span>
+                <span>Tanggal Tes: <?= date('d F Y', strtotime($p['tanggal_tes'])) ?></span>
+                <?php endif; ?>
+            </div>
         </div>
 
-        <div class="chart-container">
-            <h3 style="color: #00a2e9; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">Roles (Peran Kerja)</h3>
-            <table class="table-skor">
-                <thead>
-                    <tr>
-                        <th>Kode</th>
-                        <th>Keterangan Dimensi</th>
-                        <th>Skor</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach($roles as $kode => $ket): ?>
-                    <tr>
-                        <td class="dimensi-code"><?= $kode ?></td>
-                        <td><?= $ket ?></td>
-                        <td class="score-value"><?= $data[$kode] ?></td>
-                    </tr>
+        <!-- Body -->
+        <div class="bg-white rounded-b-2xl shadow-sm border border-slate-100 border-t-0">
+
+            <!-- Baris 1: Radar + Roles -->
+            <div class="grid grid-cols-5 gap-0 border-b border-slate-100">
+                <div class="col-span-2 p-6 border-r border-slate-100">
+                    <h3 class="text-sm font-bold text-navy mb-4 text-center">Profil kemampuan (Radar)</h3>
+                    <div style="height:220px">
+                        <canvas id="radar_<?= $idx ?>"></canvas>
+                    </div>
+                </div>
+                <div class="col-span-3 p-6">
+                    <h3 class="text-sm font-bold text-navy mb-4 pb-3 border-b border-slate-100">
+                        Roles <span class="text-blue-500">(Peran Kerja)</span>
+                    </h3>
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr>
+                                <th class="text-left text-xs font-bold text-slate-400 uppercase tracking-widest px-3 py-2 bg-slate-50 rounded-l-lg w-12">Kode</th>
+                                <th class="text-left text-xs font-bold text-slate-400 uppercase tracking-widest px-3 py-2 bg-slate-50">Keterangan Dimensi</th>
+                                <th class="text-center text-xs font-bold text-slate-400 uppercase tracking-widest px-3 py-2 bg-slate-50 rounded-r-lg w-16">Skor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($roles as $kode => $ket): ?>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-3 py-2.5 border-b border-slate-100 text-center">
+                                    <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-blue-100 text-blue-700 text-xs font-extrabold"><?= $kode ?></span>
+                                </td>
+                                <td class="px-3 py-2.5 border-b border-slate-100 text-sm text-slate-600"><?= $ket ?></td>
+                                <td class="px-3 py-2.5 border-b border-slate-100 text-center">
+                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-navy font-extrabold text-sm"><?= $p[$kode] ?? 0 ?></span>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Baris 2: Needs (full width grid) -->
+            <div class="p-6">
+                <h3 class="text-sm font-bold text-navy mb-4 pb-3 border-b border-slate-100">
+                    Needs <span class="text-violet-500">(Kebutuhan & Motivasi)</span>
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <?php foreach ($needs as $kode => $ket): ?>
+                    <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-violet-200 hover:bg-violet-50/40 transition-all">
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-violet-100 text-violet-700 text-xs font-extrabold flex-shrink-0"><?= $kode ?></span>
+                        <p class="text-sm text-slate-600 flex-1"><?= $ket ?></p>
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white border border-slate-200 text-navy font-extrabold text-sm flex-shrink-0"><?= $p[$kode] ?? 0 ?></span>
+                    </div>
                     <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="chart-container" style="grid-column: span 2;">
-            <h3 style="color: #00a2e9; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">Needs (Kebutuhan & Motivasi)</h3>
-            <table class="table-skor">
-                <thead>
-                    <tr>
-                        <th>Kode</th>
-                        <th>Keterangan Dimensi</th>
-                        <th>Skor</th>
-                        <th style="border-left: 2px solid #eee;">Kode</th>
-                        <th>Keterangan Dimensi</th>
-                        <th>Skor</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    $n_keys = array_keys($needs);
-                    for($i=0; $i < 5; $i++): 
-                        $k1 = $n_keys[$i];
-                        $k2 = $n_keys[$i+5];
-                    ?>
-                    <tr>
-                        <td class="dimensi-code"><?= $k1 ?></td>
-                        <td><?= $needs[$k1] ?></td>
-                        <td class="score-value"><?= $data[$k1] ?></td>
-                        <td class="dimensi-code" style="border-left: 2px solid #eee;"><?= $k2 ?></td>
-                        <td><?= $needs[$k2] ?></td>
-                        <td class="score-value"><?= $data[$k2] ?></td>
-                    </tr>
-                    <?php endfor; ?>
-                </tbody>
-            </table>
+                </div>
+            </div>
         </div>
     </div>
+    <?php endforeach; ?>
+    </div>
+    </div>
+    <?php endif; ?>
 </div>
 
 <script>
-const ctx = document.getElementById('papiRadarChart');
-new Chart(ctx, {
+<?php foreach ($rows as $idx => $p):
+    $all_keys = array_merge(array_keys($roles), array_keys($needs));
+    $vals = array_map(fn($k) => $p[$k] ?? 0, $all_keys);
+?>
+new Chart(document.getElementById('radar_<?= $idx ?>'), {
     type: 'radar',
     data: {
-        labels: <?= json_encode(array_keys(array_merge($roles, $needs))) ?>,
-        datasets: [{
-            label: 'Skor Dimensi',
-            data: <?= json_encode(array_values(array_intersect_key($data, array_merge($roles, $needs)))) ?>,
+        labels: <?= json_encode($all_keys) ?>,
+        datasets:[{
+            data: [<?= implode(',', $vals) ?>],
             fill: true,
-            backgroundColor: 'rgba(0, 162, 233, 0.2)',
-            borderColor: 'rgb(0, 162, 233)',
-            pointBackgroundColor: 'rgb(0, 162, 233)',
+            backgroundColor: 'rgba(37,99,235,0.15)',
+            borderColor: 'rgb(37,99,235)',
+            pointBackgroundColor: 'rgb(37,99,235)',
             pointBorderColor: '#fff',
             pointHoverBackgroundColor: '#fff',
-            pointHoverBorderColor: 'rgb(0, 162, 233)'
+            pointHoverBorderColor: 'rgb(37,99,235)',
         }]
     },
     options: {
-        elements: { line: { borderWidth: 3 } },
+        elements: { line: { borderWidth: 2.5 } },
         scales: {
             r: {
-                angleLines: { display: true },
-                suggestedMin: 0,
-                suggestedMax: 9, // Sesuai skor maksimal PAPI
-                ticks: {
-                    display: false, // Menghilangkan angka 1-9 pada grafik
-                    stepSize: 1
-                },
-                pointLabels: {
-                    font: { size: 12, weight: 'bold' },
-                    color: '#555'
-                }
+                angleLines: { display:true, color:'#E2E8F0' },
+                grid: { color:'#F1F5F9' },
+                suggestedMin: 0, suggestedMax: 9,
+                ticks: { display:false, stepSize:1 },
+                pointLabels: { font:{ size:11, weight:'bold' }, color:'#475569' }
             }
         },
-        plugins: {
-            legend: { display: false } // Sembunyikan label dataset agar lebih bersih
-        }
+        plugins: { legend: { display:false } },
+        responsive: true,
+        maintainAspectRatio: false,
     }
 });
-</script>
+<?php endforeach; ?>
 
+</script>
 </body>
 </html>

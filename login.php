@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Login | Tes Psikologi BPS</title>
+    <title>Login | PETA BPS</title>
     <link rel="stylesheet" href="style.css">
     <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css'>
     <style>
@@ -13,51 +13,69 @@
             top: 38px;
             cursor: pointer;
             color: #666;
-            font-size: 1.1rem;
             z-index: 10;
         }
-        .auth-group input { padding-right: 45px; }
+        .error-msg {
+            color: #721c24;
+            background-color: #f8d7da;
+            padding: 12px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            margin-bottom: 15px;
+            text-align: center;
+            border: 1px solid #f5c6cb;
+        }
+        .info-msg {
+            margin-top: 20px;
+            font-size: 0.8em;
+            color: #666;
+            text-align: center;
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
 
 <header class="header">
     <div class="logo">
-        <img src="images/logobps.png">
-        <span>Tes Psikologi Pegawai</span>
+        <img src="images/logobps.png" alt="Logo BPS">
+        <span>PETA — Pemetaan Potensi Pegawai</span>
     </div>
 </header>
 
 <div class="auth-container">
     <div class="auth-card">
-        <h2>Login</h2>
+        <h2>Login Peserta</h2>
 
         <?php if(isset($_GET['error'])): ?>
-            <p style="color: red; font-size: 0.85em; margin-bottom: 10px; text-align: center;">
+            <div class="error-msg">
                 <?php 
-                    if($_GET['error'] == 'gagal') echo "NIP atau Password salah!";
-                    if($_GET['error'] == 'akses_ditolak') echo "Akses ditolak!";
+                    if($_GET['error'] == 'wrong') echo "NIP atau Password salah!";
+                    elseif($_GET['error'] == 'akses_ditolak') echo "Maaf, akun Anda belum diaktifkan oleh Admin untuk jadwal hari ini.";
+                    elseif($_GET['error'] == 'empty') echo "Harap isi NIP dan Password!";
                 ?>
-            </p>
+            </div>
         <?php endif; ?>
 
         <form action="backend/login_process.php" method="POST">
             <div class="auth-group">
-                <label>NIP / Username</label>
-                <input type="text" name="nip" required autocomplete="username">
+                <label>NIP</label>
+                <input type="text" name="nip" placeholder="Masukkan NIP Anda" required>
             </div>
 
             <div class="auth-group">
                 <label>Password</label>
-                <input type="password" name="password" id="pass_login" required autocomplete="current-password">
+                <input type="password" name="password" id="pass_login" placeholder="Masukkan Password" required>
                 <i class="fi fi-rr-eye toggle-password" id="btn_toggle_login"></i>
             </div>
 
             <div class="action">
-                <button type="submit" class="btn-primary">Masuk</button>
+                <button type="submit" class="btn-primary">Login</button>
             </div>
         </form>
-        <p style="margin-top: 15px; font-size: 0.9em; text-align: center;">Belum punya akun? <a href="register.php">Daftar di sini</a></p>
+        
     </div>
 </div>
 
@@ -75,5 +93,6 @@
         }
     });
 </script>
+
 </body>
 </html>

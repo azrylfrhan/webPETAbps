@@ -2,119 +2,465 @@
 include '../backend/auth_check.php'; 
 require_once '../backend/config.php';
 
-// Query untuk mengambil data pegawai dan status pengerjaan di kedua tabel hasil
-$queryPegawai = "
-SELECT 
-    u.nip,
-    u.nama,
-    u.jabatan,
-    u.satuan_kerja,
-    h1.nip AS sudah_msdt,
-    h2.nip AS sudah_papi
-FROM users u
-LEFT JOIN hasil_msdt h1 ON u.nip = h1.nip
-LEFT JOIN hasil_papi h2 ON u.nip = h2.nip
-WHERE u.role = 'peserta'
-ORDER BY u.nama ASC
-";
+// --- IMPORT CSV / XLSX ---
+if (isset($_POST['import_csv'])) {
+    $file     = $_FILES['csv_file']['tmp_name'];
+    $filename = $_FILES['csv_file']['name'];
+    $ext      = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
-$resultPegawai = mysqli_query($conn, $queryPegawai);
+    if ($_FILES['csv_file']['size'] > 0) {
+        $rows_data = [];
+
+        if ($ext === 'csv') {
+            // Baca CSV
+            $handle = fopen($file, "r");
+            fgetcsv($handle, 1000, ","); // skip header
+            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                $rows_data[] = $data;
+            }
+            fclose($handle);
+
+        } elseif ($ext === 'xlsx' || $ext === 'xls') {
+            $zip = new ZipArchive();
+            if ($zip->open($file) === TRUE) {
+                $shared_xml = $zip->getFromName('xl/sharedStrings.xml');
+                $sheet_xml  = $zip->getFromName('xl/worksheets/sheet1.xml');
+                $zip->close();
+
+                // Parse shared strings (tipe t="s" = index ke sini)
+                $strings = [];
+                if ($shared_xml) {
+                    preg_match_all('/<si>(.*?)<\/si>/s', $shared_xml, $si_matches);
+                    foreach ($si_matches[1] as $si) {
+                        preg_match_all('/<t[^>]*>(.*?)<\/t>/s', $si, $t_matches);
+                        $strings[] = html_entity_decode(implode('', $t_matches[1]));
+                    }
+                }
+
+                if ($sheet_xml) {
+                    // Konversi kolom letter ke index (A=0, B=1, dst)
+                    $col2idx = function($col) {
+                        $idx = 0;
+                        foreach (str_split(strtoupper($col)) as $ch) {
+                            $idx = $idx * 26 + (ord($ch) - 64);
+                        }
+                        return $idx - 1;
+                    };
+
+                    preg_match_all('/<row\b[^>]*>(.*?)<\/row>/s', $sheet_xml, $row_matches);
+                    $first_row = true;
+                    foreach ($row_matches[1] as $row_xml) {
+                        if ($first_row) { $first_row = false; continue; } // skip header
+
+                        // Parse tiap cell: <c r="A1" t="s"><v>0</v></c>
+                        preg_match_all('/<c\b([^>]*)>(.*?)<\/c>/s', $row_xml, $cell_matches, PREG_SET_ORDER);
+                        $row_arr = [];
+                        foreach ($cell_matches as $cm) {
+                            $attrs    = $cm[1];
+                            $inner    = $cm[2];
+
+                            // Ambil referensi kolom (misal "A1" → "A")
+                            preg_match('/r="([A-Z]+)\d+"/i', $attrs, $ref_m);
+                            if (!$ref_m) continue;
+                            $col_idx = $col2idx($ref_m[1]);
+
+                            // Ambil nilai
+                            preg_match('/<v>(.*?)<\/v>/s', $inner, $v_m);
+                            if (!$v_m) continue;
+                            $raw = $v_m[1];
+
+                            // Cek tipe: t="s" = shared string index
+                            if (preg_match('/\bt="s"/', $attrs)) {
+                                $val = $strings[(int)$raw] ?? '';
+                            } else {
+                                // Numerik atau tanggal — gunakan langsung
+                                $val = $raw;
+                            }
+
+                            $row_arr[$col_idx] = $val;
+                        }
+
+                        if (!empty($row_arr)) {
+                            ksort($row_arr);
+                            $rows_data[] = array_values($row_arr);
+                        }
+                    }
+                }
+            }
+        }
+
+        $count = 0;
+        foreach ($rows_data as $data) {
+            $nip     = mysqli_real_escape_string($conn, trim($data[1] ?? ''));
+            $nama    = mysqli_real_escape_string($conn, trim($data[2] ?? ''));
+            $jabatan = mysqli_real_escape_string($conn, trim($data[3] ?? ''));
+            $satker  = mysqli_real_escape_string($conn, trim($data[4] ?? ''));
+            $pangkat = mysqli_real_escape_string($conn, trim($data[5] ?? ''));
+            if (!$nip) continue;
+            $hashed = password_hash(substr($nip, 0, 6), PASSWORD_DEFAULT);
+            $sql = "INSERT INTO users (nip,nama,jabatan,satuan_kerja,pangkat_golongan,password,is_active,role)
+                    VALUES ('$nip','$nama','$jabatan','$satker','$pangkat','$hashed',0,'peserta')
+                    ON DUPLICATE KEY UPDATE nama='$nama',jabatan='$jabatan',satuan_kerja='$satker',pangkat_golongan='$pangkat'";
+            if (mysqli_query($conn, $sql)) $count++;
+        }
+
+        header("Location: status_pegawai.php?import=success&count=$count");
+        exit;
+    }
+}
+
+// --- BULK ACTION ---
+if (isset($_POST['bulk_action']) && !empty($_POST['selected_nip'])) {
+    $nips     = $_POST['selected_nip'];
+    $action   = $_POST['action_type'];
+    $nip_list = implode("','", array_map(fn($n) => mysqli_real_escape_string($conn, $n), $nips));
+    switch ($action) {
+        case 'aktifkan':    mysqli_query($conn, "UPDATE users SET is_active=1 WHERE nip IN ('$nip_list')"); break;
+        case 'nonaktifkan': mysqli_query($conn, "UPDATE users SET is_active=0 WHERE nip IN ('$nip_list')"); break;
+        case 'reset_iq':
+            mysqli_query($conn, "DELETE FROM iq_test_sessions WHERE nip IN ('$nip_list')");
+            mysqli_query($conn, "DELETE FROM iq_user_answers WHERE user_nip IN ('$nip_list')");
+            break;
+        case 'reset_msdt':  mysqli_query($conn, "DELETE FROM hasil_msdt WHERE nip IN ('$nip_list')"); break;
+        case 'reset_papi':  mysqli_query($conn, "DELETE FROM hasil_papi WHERE nip IN ('$nip_list')"); break;
+    }
+    header("Location: status_pegawai.php?bulk=success");
+    exit;
+}
+
+// --- QUERY ---
+$result = mysqli_query($conn, "
+    SELECT 
+        u.nip, u.nama, u.jabatan, u.satuan_kerja,
+        COALESCE(u.pangkat_golongan, '-') AS pangkat,
+        u.is_active,
+        h1.nip  AS sudah_msdt,
+        h2.nip  AS sudah_papi,
+        iq.status AS status_iq
+    FROM users u
+    LEFT JOIN hasil_msdt h1 ON u.nip = h1.nip
+    LEFT JOIN hasil_papi h2 ON u.nip = h2.nip
+    LEFT JOIN iq_test_sessions iq ON u.nip = iq.nip
+    WHERE u.role = 'peserta'
+    ORDER BY u.nama ASC
+");
+
+// Hitung summary
+$total = $aktif = $iq_selesai = $msdt_selesai = $papi_selesai = 0;
+$rows  = [];
+while ($r = mysqli_fetch_assoc($result)) {
+    $rows[] = $r;
+    $total++;
+    if ($r['is_active'])           $aktif++;
+    if ($r['status_iq']==='finished') $iq_selesai++;
+    if ($r['sudah_msdt'])          $msdt_selesai++;
+    if ($r['sudah_papi'])          $papi_selesai++;
+}
 ?>
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Status Tes Pegawai | Admin BPS</title>
-    <link rel="stylesheet" href="admin-style.css">
+    <title>Status Tes Pegawai | Admin PETA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Plus Jakarta Sans','sans-serif']},colors:{navy:{DEFAULT:'#0F1E3C'}}}}}</script>
     <style>
-        .badge { padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .badge-success { background-color: #d4edda; color: #155724; }
-        .badge-danger { background-color: #f8d7da; color: #721c24; }
-        .btn-action { padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; color: white; display: inline-block; margin: 2px; }
-        .btn-reset-msdt { background-color: #e74c3c; }
-        .btn-reset-papi { background-color: #f39c12; }
+        body{font-family:'Plus Jakarta Sans',sans-serif;}
+        ::-webkit-scrollbar{width:5px;height:5px;}
+        ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:99px;}
+        .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap;}
+        .badge-green{background:#d1fae5;color:#065f46;}
+        .badge-red{background:#fee2e2;color:#991b1b;}
+        .badge-blue{background:#dbeafe;color:#1e40af;}
+        .badge-gray{background:#f1f5f9;color:#64748b;}
+        .badge-amber{background:#fef3c7;color:#92400e;}
+        #action-bar{transition:all .2s ease;}
     </style>
 </head>
-<body>
+<body class="bg-slate-100 flex min-h-screen">
 
 <?php include 'includes/sidebar.php'; ?>
 
-<div class="main-content">
-    <header>
-        <h1>Status Tes Pegawai</h1>
-    </header>
+<div class="ml-[260px] flex-1 p-8">
 
-    <?php if (isset($_GET['status']) && $_GET['status'] == 'reset_berhasil'): ?>
-        <div style="background: #d4edda; color: #155724; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
-            ✓ Data tes berhasil di-reset.
-        </div>
+    <!-- Header -->
+    <div class="mb-7">
+        <h1 class="text-2xl font-extrabold text-navy tracking-tight">Data Pegawai</h1>
+        <p class="text-slate-500 text-sm mt-1">Pantau dan kelola seluruh pegawai tes PETA.</p>
+    </div>
+
+    <!-- ALERTS -->
+    <?php if (isset($_GET['import'])): ?>
+    <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl mb-5 text-sm font-semibold">
+        ✅ <?= (int)$_GET['count'] ?> data pegawai berhasil diimpor.
+    </div>
+    <?php endif; ?>
+    <?php if (isset($_GET['bulk']) || (isset($_GET['status']) && $_GET['status']==='reset_berhasil')): ?>
+    <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl mb-5 text-sm font-semibold">
+        ✅ Aksi berhasil diterapkan.
+    </div>
     <?php endif; ?>
 
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>No</th>
-                    <th>Pegawai</th>
-                    <th>Unit Kerja</th>
-                    <th>Bagian 1 (MSDT)</th>
-                    <th>Bagian 2 (PAPI)</th>
-                    <th>Aksi Reset</th>
-                </tr>
-            </thead>
-            <tbody>
-            <?php 
-            $no = 1;
-            while($p = mysqli_fetch_assoc($resultPegawai)): 
-            ?>
-                <tr>
-                    <td><?= $no++; ?></td>
-                    <td>
-                        <strong><?= htmlspecialchars($p['nama']); ?></strong><br>
-                        <small>NIP: <?= $p['nip']; ?></small>
-                    </td>
-                    <td><?= htmlspecialchars($p['satuan_kerja']); ?></td>
-                    
-                    <td>
-                        <?php if ($p['sudah_msdt']): ?>
-                            <span class="badge badge-success">Selesai</span>
-                        <?php else: ?>
-                            <span class="badge badge-danger">Belum</span>
-                        <?php endif; ?>
-                    </td>
-
-                    <td>
-                        <?php if ($p['sudah_papi']): ?>
-                            <span class="badge badge-success">Selesai</span>
-                        <?php else: ?>
-                            <span class="badge badge-danger">Belum</span>
-                        <?php endif; ?>
-                    </td>
-
-                    <td>
-                        <?php if ($p['sudah_msdt']): ?>
-                            <a href="reset_tes.php?nip=<?= $p['nip']; ?>&tipe=msdt" 
-                               class="btn-action btn-reset-msdt"
-                               onclick="return confirm('Reset hasil MSDT pegawai ini?')">Reset MSDT</a>
-                        <?php endif; ?>
-
-                        <?php if ($p['sudah_papi']): ?>
-                            <a href="reset_tes.php?nip=<?= $p['nip']; ?>&tipe=papi" 
-                               class="btn-action btn-reset-papi"
-                               onclick="return confirm('Reset hasil PAPI pegawai ini?')">Reset PAPI</a>
-                        <?php endif; ?>
-
-                        <?php if (!$p['sudah_msdt'] && !$p['sudah_papi']): ?>
-                            <span style="color: #999;">-</span>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-            <?php endwhile; ?>
-            </tbody>
-        </table>
+    <!-- SUMMARY CARDS -->
+    <div class="grid grid-cols-5 gap-4 mb-6">
+        <?php
+        $cards = [
+            ['Total Pegawai',   $total,        'bg-white',        'text-navy',      '👥'],
+            ['Akun Aktif',      $aktif,        'bg-emerald-50',   'text-emerald-700','✓'],
+            ['Tes IQ Selesai',   $iq_selesai,   'bg-blue-50',      'text-blue-700',  '①'],
+            ['Tes Kprib. Bag.1 Selesai',    $msdt_selesai, 'bg-purple-50',    'text-purple-700','②'],
+            ['Tes Kprib. Bag.2 Selesai',    $papi_selesai, 'bg-amber-50',     'text-amber-700', '②'],
+        ];
+        foreach ($cards as [$label, $val, $bg, $color, $icon]): ?>
+        <div class="<?= $bg ?> rounded-xl border border-slate-100 shadow-sm px-5 py-4">
+            <p class="text-xs font-semibold text-slate-400 mb-1"><?= $label ?></p>
+            <p class="text-2xl font-black <?= $color ?>"><?= $val ?></p>
+            <p class="text-xs text-slate-300 mt-1">dari <?= $total ?> pegawai</p>
+        </div>
+        <?php endforeach; ?>
     </div>
+
+    <!-- IMPORT CSV -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 mb-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-bold text-navy">Import Data Pegawai (CSV)</p>
+                <p class="text-xs text-slate-400 mt-0.5">Format: <span class="font-mono bg-slate-50 px-1.5 py-0.5 rounded border text-[11px]">No, NIP, Nama, Jabatan, Satker, Pangkat</span> — File: <strong>.xlsx</strong> atau .csv</p>
+            </div>
+            <button onclick="document.getElementById('ip').classList.toggle('hidden')"
+                class="text-xs bg-navy text-white px-4 py-2 rounded-lg font-bold hover:opacity-90 transition">
+                + Import CSV
+            </button>
+        </div>
+        <div id="ip" class="hidden mt-4 pt-4 border-t border-slate-100">
+            <form method="POST" enctype="multipart/form-data" class="flex items-center gap-3">
+                <input type="file" name="csv_file" accept=".csv,.xlsx,.xls" required
+                    class="text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 file:font-semibold hover:file:bg-slate-200 cursor-pointer">
+                <button type="submit" name="import_csv"
+                    class="bg-navy text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:opacity-90 transition">Unggah</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- TABEL -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100">
+
+        <!-- Toolbar -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 gap-3 flex-wrap">
+            <h3 class="text-sm font-bold text-navy">Daftar Pegawai <span class="text-slate-400 font-normal">(<?= $total ?>)</span></h3>
+
+            <div class="flex items-center gap-2 flex-wrap">
+                <!-- Action bar -->
+                <div id="action-bar" class="hidden items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+                    <span class="text-xs font-bold text-navy mr-1" id="sel-count">0 dipilih</span>
+                    <span class="w-px h-4 bg-slate-300 inline-block"></span>
+                    <button type="button" onclick="doBulk('aktifkan')" class="badge badge-green cursor-pointer hover:opacity-80">✓ Aktifkan</button>
+                    <button type="button" onclick="doBulk('nonaktifkan')" class="badge badge-gray cursor-pointer hover:opacity-80">✗ Non-aktif</button>
+                    <button type="button" onclick="doBulk('reset_iq')" class="badge badge-blue cursor-pointer hover:opacity-80">↺ Reset IQ</button>
+                    <button type="button" onclick="doBulk('reset_msdt')" class="badge cursor-pointer hover:opacity-80" style="background:#ede9fe;color:#5b21b6">↺ Reset Kprib.1</button>
+                    <button type="button" onclick="doBulk('reset_papi')" class="badge badge-amber cursor-pointer hover:opacity-80">↺ Reset Kprib.2</button>
+                    <button type="button" onclick="clearAll()" class="text-slate-400 hover:text-slate-600 text-sm ml-1">✕</button>
+                </div>
+
+                <!-- Search -->
+                <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+                    <input id="q" type="text" placeholder="Cari pegawai"
+                        oninput="doSearch()"
+                        class="pl-8 pr-7 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white w-72 placeholder-slate-400 transition-all">
+                    <button type="button" onclick="clearSearch()" id="clrQ"
+                        class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">✕</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <form id="bf" method="POST">
+            <input type="hidden" name="bulk_action" value="1">
+            <input type="hidden" name="action_type" id="at">
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-100">
+                            <th class="px-4 py-3 text-left w-8">
+                                <input type="checkbox" id="sa" class="rounded cursor-pointer accent-navy">
+                            </th>
+                            <th class="px-3 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider w-8">No</th>
+                            <th class="px-3 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nama / NIP</th>
+                            <th class="px-3 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">Jabatan</th>
+                            <th class="px-3 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">Unit Kerja</th>
+                            <th class="px-3 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pangkat</th>
+                            <th class="px-3 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider">Akses</th>
+                            <th class="px-3 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tes IQ</th>
+                            <th class="px-3 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kprib. Bag.1</th>
+                            <th class="px-3 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kprib. Bag.2</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($rows as $i => $p): 
+                        $search_data = strtolower(implode(' ', [
+                            $p['nip'],
+                            $p['nama'],
+                            $p['jabatan'] ?? '',
+                            $p['satuan_kerja'] ?? '',
+                            $p['pangkat'] ?? '',
+                            $p['is_active'] ? 'aktif' : 'non-aktif',
+                            $p['status_iq'] === 'finished' ? 'selesai' : ($p['status_iq'] === 'running' ? 'sedang' : 'belum'),
+                            $p['sudah_msdt'] ? 'selesai' : 'belum',
+                            $p['sudah_papi'] ? 'selesai' : 'belum',
+                        ]));
+                    ?>
+                        <tr class="row border-b border-slate-50 hover:bg-slate-50/70 transition-colors"
+                            data-s="<?= htmlspecialchars($search_data) ?>">
+                            <td class="px-4 py-3">
+                                <input type="checkbox" name="selected_nip[]" value="<?= $p['nip'] ?>"
+                                    class="cb rounded cursor-pointer accent-navy">
+                            </td>
+                            <td class="px-3 py-3 text-slate-400 text-xs"><?= $i+1 ?></td>
+
+                            <!-- Nama -->
+                            <td class="px-3 py-3">
+                                <a href="detail_pegawai.php?nip=<?= $p['nip'] ?>" class="group block">
+                                    <p class="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors text-sm leading-tight">
+                                        <?= htmlspecialchars($p['nama']) ?>
+                                    </p>
+                                    <p class="text-xs text-slate-400 font-mono mt-0.5"><?= $p['nip'] ?></p>
+                                </a>
+                            </td>
+
+                            <!-- Jabatan -->
+                            <td class="px-3 py-3 text-slate-500 text-xs leading-tight max-w-[140px]">
+                                <?= htmlspecialchars($p['jabatan'] ?? '-') ?>
+                            </td>
+
+                            <!-- Unit Kerja -->
+                            <td class="px-3 py-3 text-slate-500 text-xs leading-tight max-w-[120px]">
+                                <?= htmlspecialchars($p['satuan_kerja'] ?? '-') ?>
+                            </td>
+
+                            <!-- Pangkat -->
+                            <td class="px-3 py-3 text-slate-500 text-xs">
+                                <?= htmlspecialchars($p['pangkat']) ?>
+                            </td>
+
+                            <!-- Akses -->
+                            <td class="px-3 py-3 text-center">
+                                <?php if ($p['is_active']): ?>
+                                    <span class="badge badge-green">Aktif</span>
+                                <?php else: ?>
+                                    <span class="badge badge-gray">Non-aktif</span>
+                                <?php endif; ?>
+                            </td>
+
+                            <!-- Tes 1 IQ -->
+                            <td class="px-3 py-3 text-center">
+                                <?php if ($p['status_iq']==='finished'): ?>
+                                    <span class="badge badge-green">✓</span>
+                                <?php elseif ($p['status_iq']==='running'): ?>
+                                    <span class="badge badge-blue">⟳</span>
+                                <?php else: ?>
+                                    <span class="badge badge-red">✗</span>
+                                <?php endif; ?>
+                            </td>
+
+                            <!-- MSDT -->
+                            <td class="px-3 py-3 text-center">
+                                <span class="badge <?= $p['sudah_msdt'] ? 'badge-green' : 'badge-red' ?>">
+                                    <?= $p['sudah_msdt'] ? '✓' : '✗' ?>
+                                </span>
+                            </td>
+
+                            <!-- PAPI -->
+                            <td class="px-3 py-3 text-center">
+                                <span class="badge <?= $p['sudah_papi'] ? 'badge-green' : 'badge-red' ?>">
+                                    <?= $p['sudah_papi'] ? '✓' : '✗' ?>
+                                </span>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                        <tr id="er" class="hidden">
+                            <td colspan="10" class="text-center py-16 text-slate-400">
+                                <p class="text-3xl mb-2">🔍</p>
+                                <p class="text-sm">Tidak ada pegawai yang cocok.</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </form>
+
+        <!-- Footer info -->
+        <div class="px-6 py-3 border-t border-slate-100 flex items-center justify-between">
+            <p class="text-xs text-slate-400" id="info-row">Menampilkan <?= $total ?> pegawai</p>
+            <div class="flex items-center gap-4 text-xs text-slate-400">
+                <span class="flex items-center gap-1"><span class="badge badge-green">✓</span> Selesai</span>
+                <span class="flex items-center gap-1"><span class="badge badge-blue">⟳</span> Sedang</span>
+                <span class="flex items-center gap-1"><span class="badge badge-red">✗</span> Belum</span>
+            </div>
+        </div>
+    </div>
+
 </div>
 
+<script>
+// CHECKBOX
+document.getElementById('sa').addEventListener('change', function() {
+    document.querySelectorAll('.cb').forEach(c => c.checked = this.checked);
+    updBar();
+});
+document.querySelectorAll('.cb').forEach(c => c.addEventListener('change', updBar));
+
+function updBar() {
+    const n   = document.querySelectorAll('.cb:checked').length;
+    const bar = document.getElementById('action-bar');
+    document.getElementById('sel-count').textContent = n + ' dipilih';
+    if (n > 0) { bar.classList.remove('hidden'); bar.classList.add('flex'); }
+    else        { bar.classList.add('hidden');    bar.classList.remove('flex'); }
+}
+
+function clearAll() {
+    document.querySelectorAll('.cb, #sa').forEach(c => c.checked = false);
+    updBar();
+}
+
+function doBulk(action) {
+    const n = document.querySelectorAll('.cb:checked').length;
+    const lbl = {aktifkan:'mengaktifkan',nonaktifkan:'menonaktifkan',reset_iq:'mereset Tes IQ',reset_msdt:'mereset Tes Kepribadian Bagian 1',reset_papi:'mereset Tes Kepribadian Bagian 2'};
+    if (!confirm(`Yakin ${lbl[action]} ${n} pegawai terpilih?\nTindakan ini tidak bisa dibatalkan.`)) return;
+    document.getElementById('at').value = action;
+    document.getElementById('bf').submit();
+}
+
+// SEARCH
+function doSearch() {
+    const kw  = document.getElementById('q').value.toLowerCase().trim();
+    const rows = document.querySelectorAll('.row');
+    document.getElementById('clrQ').classList.toggle('hidden', !kw);
+    let vis = 0;
+    rows.forEach(r => {
+        const m = (r.dataset.s||'').includes(kw);
+        r.classList.toggle('hidden', !m);
+        if (m) vis++;
+    });
+    document.getElementById('er').classList.toggle('hidden', vis > 0 || !kw);
+    document.getElementById('info-row').textContent = kw
+        ? `Menampilkan ${vis} dari <?= $total ?> pegawai`
+        : `Menampilkan <?= $total ?> pegawai`;
+}
+
+function clearSearch() {
+    document.getElementById('q').value = '';
+    doSearch();
+    document.getElementById('q').focus();
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key==='/' && document.activeElement.tagName!=='INPUT') {
+        e.preventDefault(); document.getElementById('q').focus();
+    }
+});
+</script>
 </body>
 </html>

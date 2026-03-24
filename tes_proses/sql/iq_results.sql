@@ -1,0 +1,6 @@
+CREATE TABLE iq_results (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    skor INT,
+    tanggal DATETIME DEFAULT CURRENT_TIMESTAMP
+);

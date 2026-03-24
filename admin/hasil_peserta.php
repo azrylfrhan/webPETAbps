@@ -2,25 +2,28 @@
 include '../backend/auth_check.php'; 
 require_once '../backend/config.php';
 
-
-// Query yang sudah diperbaiki kolomnya (menggunakan tanggal_tes)
-$query = "
+// PERBAIKAN: Menambahkan LEFT JOIN untuk tabel iq_results
+// Kita menggunakan u.id = h3.user_id sesuai dengan struktur tabel iq_results yang Anda buat
+$queryPegawai = "
 SELECT 
     u.nip, 
     u.nama, 
     u.satuan_kerja,
     h1.tanggal_tes AS tgl_msdt,
-    h2.tanggal_tes AS tgl_papi
+    h2.tanggal_tes AS tgl_papi,
+    h3.tanggal AS tgl_iq
 FROM users u
 LEFT JOIN hasil_msdt h1 ON u.nip = h1.nip
 LEFT JOIN hasil_papi h2 ON u.nip = h2.nip
-WHERE h1.nip IS NOT NULL OR h2.nip IS NOT NULL
-ORDER BY u.nama ASC
-";
-$result = mysqli_query($conn, $query);
+LEFT JOIN iq_results h3 ON u.nip = h3.user_id
+WHERE u.role = 'peserta' AND (h1.nip IS NOT NULL OR h2.nip IS NOT NULL OR h3.user_id IS NOT NULL)
+ORDER BY u.nama ASC";
 
-// Cek jika query gagal untuk debug lebih lanjut
-if (!$result) {
+// 2. Eksekusi kueri ke variabel $resultPegawai
+$resultPegawai = mysqli_query($conn, $queryPegawai);
+
+// 3. PERBAIKAN: Menggunakan variabel $resultPegawai (bukan $result) untuk cek error
+if (!$resultPegawai) {
     die("Query Error: " . mysqli_error($conn));
 }
 ?>
@@ -30,104 +33,135 @@ if (!$result) {
 <head>
     <meta charset="UTF-8">
     <title>Hasil Tes Pegawai | Admin BPS</title>
-    <link rel="stylesheet" href="admin-style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: { navy: { DEFAULT: '#0F1E3C' } }
+                }
+            }
+        }
+    </script>
     <style>
-        .btn-view {
-            display: inline-block;
-            padding: 8px 15px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: bold;
-            margin: 2px;
-            transition: 0.3s;
-        }
-        .btn-msdt { background-color: #3498db; color: white; border: 1px solid #2980b9; }
-        .btn-papi { background-color: #f39c12; color: white; border: 1px solid #d35400; }
-        .btn-msdt:hover { background-color: #2980b9; }
-        .btn-papi:hover { background-color: #d35400; }
-        
-        .status-tag {
-            font-size: 11px;
-            padding: 3px 8px;
-            border-radius: 4px;
-            background: #f0f0f0;
-            color: #666;
-            display: block;
-            margin-top: 5px;
-        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
     </style>
 </head>
-<body>
 
-<div class="sidebar">
-    <div class="sidebar-logo">
-        <img src="../images/logobps.png" alt="BPS">
-        <span>Admin Panel</span>
-    </div>
-</div>
+<body class="bg-slate-100 flex min-h-screen">
+
 <?php include 'includes/sidebar.php'; ?>
 
-<div class="main-content">
-    <header>
-        <h1>Laporan Hasil Tes Psikologi</h1>
-        <p>Silakan pilih kategori tes untuk melihat analisis mendalam.</p>
-    </header>
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>No</th>
-                    <th>Informasi Pegawai</th>
-                    <th>Unit Kerja</th>
-                    <th style="text-align: center;">Aksi Lihat Hasil</th>
-                </tr>
-            </thead>
-            <tbody>
-        <div class="action-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2>Daftar Hasil Tes Pegawai</h2>
-                <div class="export-buttons">
-                    <a href="export_msdt.php" class="btn-view" style="background-color: #28a745; color: white;">
-                    Excel Rekap MSDT
-                    </a>
-                <a href="export_papi.php" class="btn-view" style="background-color: #17a2b8; color: white;">
-                    Excel Rekap PAPI
-                </a>
-            </div>
-        </div>
-                <?php 
-                $no = 1;
-                while($row = mysqli_fetch_assoc($result)): 
-                ?>
-                <tr>
-                    <td><?= $no++; ?></td>
-                    <td>
-                        <strong><?= htmlspecialchars($row['nama']); ?></strong><br>
-                        <small>NIP: <?= $row['nip']; ?></small>
-                    </td>
-                    <td><?= htmlspecialchars($row['satuan_kerja']); ?></td>
-                    <td style="text-align: center;">
-                        <?php if($row['tgl_msdt']): ?>
-                            <a href="hasil_msdt.php?nip=<?= $row['nip']; ?>" class="btn-view btn-msdt">
-                                📊 Lihat MSDT
-                            </a>
-                        <?php else: ?>
-                            <span class="status-tag">MSDT Belum Ada</span>
-                        <?php endif; ?>
+<div class="ml-[260px] flex-1 p-8">
 
-                        <?php if($row['tgl_papi']): ?>
-                            <a href="hasil_papi.php?nip=<?= $row['nip']; ?>" class="btn-view btn-papi">
-                                📊 Lihat PAPI
-                            </a>
-                        <?php else: ?>
-                            <span class="status-tag">PAPI Belum Ada</span>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-                <?php endwhile; ?>
-            </tbody>
-        </table>
+    <div class="flex items-start justify-between mb-8 pb-6 border-b border-slate-200">
+        <div>
+            <h1 class="text-2xl font-extrabold text-navy tracking-tight">Laporan Hasil Tes Pegawai</h1>
+            <p class="text-slate-500 text-sm mt-1">Silakan pilih kategori tes untuk melihat analisis mendalam.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="export_iq.php"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white transition-colors shadow-sm">
+                📥 Excel Tes 1
+            </a>
+            <a href="export_msdt.php"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white transition-colors shadow-sm">
+                📥 Excel Tes 2 Bag. 1
+            </a>
+            <a href="export_papi.php"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-cyan-500 hover:bg-cyan-600 text-white transition-colors shadow-sm">
+                📥 Excel Tes 2 Bag. 2 
+            </a>
+        </div>
     </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+        <div class="flex items-center justify-between mb-5">
+            <h3 class="text-base font-bold text-navy">Daftar Hasil Tes Pegawai</h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse">
+                <thead>
+                    <tr>
+                        <th class="text-left text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50 rounded-l-lg w-10">No</th>
+                        <th class="text-left text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50">Informasi Pegawai</th>
+                        <th class="text-left text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50">Unit Kerja</th>
+                        <th class="text-center text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50 rounded-r-lg">Tes 1</th>
+                        <th class="text-center text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50">Tes 2 Bag. 1</th>
+                        <th class="text-center text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50">Tes 2 Bag. 2</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                    $no = 1;
+                    while($row = mysqli_fetch_assoc($resultPegawai)): 
+                    ?>
+                    <tr class="hover:bg-blue-50/40 transition-colors">
+
+                        <td class="px-4 py-3.5 border-b border-slate-100 text-sm text-slate-400 font-medium">
+                            <?= $no++; ?>
+                        </td>
+
+                        <td class="px-4 py-3.5 border-b border-slate-100">
+                            <p class="text-sm font-semibold text-slate-700"><?= htmlspecialchars($row['nama']); ?></p>
+                            <p class="text-xs text-slate-400 mt-0.5">NIP: <?= $row['nip']; ?></p>
+                        </td>
+
+                        <td class="px-4 py-3.5 border-b border-slate-100 text-sm text-slate-500">
+                            <?= htmlspecialchars($row['satuan_kerja']); ?>
+                        </td>
+
+                        <td class="px-4 py-3.5 border-b border-slate-100 text-center">
+                            <?php if($row['tgl_iq']): ?>
+                                <a href="hasil_iq.php?nip=<?= $row['nip']; ?>"
+                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 hover:bg-amber-500 text-amber-700 hover:text-white transition-all">
+                                    📊 Lihat Tes 1
+                                </a>
+                            <?php else: ?>
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-400">
+                                    Belum Ada
+                                </span>
+                            <?php endif; ?>
+                        </td>
+
+                        <td class="px-4 py-3.5 border-b border-slate-100 text-center">
+                            <?php if($row['tgl_msdt']): ?>
+                                <a href="hasil_msdt.php?nip=<?= $row['nip']; ?>"
+                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-100 hover:bg-blue-500 text-blue-700 hover:text-white transition-all">
+                                    📊 Lihat Tes 2 Bag. 1
+                                </a>
+                            <?php else: ?>
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-400">
+                                    Belum Ada
+                                </span>
+                            <?php endif; ?>
+                        </td>
+
+                        <td class="px-4 py-3.5 border-b border-slate-100 text-center">
+                            <?php if($row['tgl_papi']): ?>
+                                <a href="hasil_papi.php?nip=<?= $row['nip']; ?>"
+                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-100 hover:bg-violet-500 text-violet-700 hover:text-white transition-all">
+                                    📊 Lihat Tes 2 Bag. 2
+                                </a>
+                            <?php else: ?>
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-400">
+                                    Belum Ada
+                                </span>
+                            <?php endif; ?>
+                        </td>
+
+                    </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 
 </body>

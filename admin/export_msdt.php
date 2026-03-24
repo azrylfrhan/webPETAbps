@@ -2,42 +2,92 @@
 require_once '../backend/config.php';
 include '../backend/auth_check.php';
 
-header("Content-Type: application/vnd-ms-excel");
-header("Content-Disposition: attachment; filename=Rekap_Hasil_MSDT_BPS.xls");
-
-$query = "SELECT u.nama, u.nip, h.to_score, h.ro_score, h.e_score, h.o_score, h.tanggal_tes 
-          FROM hasil_msdt h 
-          JOIN users u ON h.nip = u.nip 
-          ORDER BY h.tanggal_tes DESC";
+$query = "SELECT u.nama, u.nip, u.jabatan, u.satuan_kerja,
+                 h.to_score, h.ro_score, h.e_score, h.o_score,
+                 h.Ds, h.Mi, h.Au, h.Co, h.Bu, h.Dv, h.Ba, h.E_dim,
+                 h.dominant_model, h.tanggal_tes
+          FROM hasil_msdt h
+          JOIN users u ON h.nip = u.nip
+          WHERE u.role = 'peserta'
+          ORDER BY u.nama ASC";
 $result = mysqli_query($conn, $query);
-?>
+$rows = [];
+while ($r = mysqli_fetch_assoc($result)) $rows[] = $r;
 
-<table border="1">
+header("Content-Type: application/vnd-ms-excel");
+header("Content-Disposition: attachment; filename=Rekap_Hasil_Tes-2_Bag-1.xls");
+header("Cache-Control: max-age=0");
+?>
+<table border="1" cellpadding="5" cellspacing="0" style="border-collapse:collapse; font-family:Arial; font-size:11px;">
+
     <tr>
-        <th colspan="7" style="font-size: 16px;">REKAPITULASI HASIL TES MSDT</th>
+        <td colspan="20" style="font-size:15px; font-weight:bold; color:#0F1E3C; border:none; padding:8px 5px 2px;">
+            REKAPITULASI HASIL TES 2 BAG. 1
+        </td>
     </tr>
     <tr>
-        <th>No</th>
-        <th>NIP</th>
-        <th>Nama Pegawai</th>
-        <th>TO</th>
-        <th>RO</th>
-        <th>E</th>
-        <th>O (Ds)</th>
-        <th>Tanggal Tes</th>
+        <td colspan="20" style="font-size:10px; color:#64748B; border:none; padding:0 5px 10px;">
+            Tanggal Export: <?= date('d F Y') ?> &nbsp;|&nbsp; Total Peserta: <?= count($rows) ?>
+        </td>
     </tr>
-    <?php 
-    $no = 1;
-    while($row = mysqli_fetch_assoc($result)): 
+
+    <tr style="text-align:center; font-weight:bold; font-size:11px;">
+        <td style="background-color:#0F1E3C; color:#fff; width:35px;">No</td>
+        <td style="background-color:#0F1E3C; color:#fff; width:130px;">NIP</td>
+        <td style="background-color:#0F1E3C; color:#fff; width:180px;">Nama Pegawai</td>
+        <td style="background-color:#0F1E3C; color:#fff; width:150px;">Jabatan</td>
+        <td style="background-color:#0F1E3C; color:#fff; width:130px;">Satuan Kerja</td>
+        <td style="background-color:#1E40AF; color:#fff; width:40px;">TO</td>
+        <td style="background-color:#1E40AF; color:#fff; width:40px;">RO</td>
+        <td style="background-color:#1E40AF; color:#fff; width:40px;">E</td>
+        <td style="background-color:#1E40AF; color:#fff; width:40px;">O</td>
+        <td style="background-color:#4C1D95; color:#fff; width:40px;">Ds</td>
+        <td style="background-color:#4C1D95; color:#fff; width:40px;">Mi</td>
+        <td style="background-color:#4C1D95; color:#fff; width:40px;">Au</td>
+        <td style="background-color:#4C1D95; color:#fff; width:40px;">Co</td>
+        <td style="background-color:#4C1D95; color:#fff; width:40px;">Bu</td>
+        <td style="background-color:#4C1D95; color:#fff; width:40px;">Dv</td>
+        <td style="background-color:#4C1D95; color:#fff; width:40px;">Ba</td>
+        <td style="background-color:#4C1D95; color:#fff; width:40px;">E</td>
+        <td style="background-color:#0F1E3C; color:#fff; width:100px;">Model Dominan</td>
+        <td style="background-color:#0F1E3C; color:#fff; width:90px;">Tanggal Tes</td>
+    </tr>
+
+    <?php foreach ($rows as $i => $r):
+        $bg = ($i % 2 === 0) ? '#FFFFFF' : '#F8FAFC';
     ?>
-    <tr>
-        <td><?= $no++; ?></td>
-        <td>'<?= $row['nip']; ?></td> <td><?= $row['nama']; ?></td>
-        <td><?= $row['to_score']; ?></td>
-        <td><?= $row['ro_score']; ?></td>
-        <td><?= $row['e_score']; ?></td>
-        <td><?= $row['o_score']; ?></td>
-        <td><?= $row['tanggal_tes']; ?></td>
+    <tr style="background-color:<?= $bg ?>; font-size:11px;">
+        <td style="text-align:center;"><?= $i+1 ?></td>
+        <td style="text-align:center; font-family:monospace;">'<?= htmlspecialchars($r['nip']) ?></td>
+        <td><?= htmlspecialchars($r['nama']) ?></td>
+        <td><?= htmlspecialchars($r['jabatan'] ?? '-') ?></td>
+        <td><?= htmlspecialchars($r['satuan_kerja'] ?? '-') ?></td>
+        <td style="text-align:center; font-weight:bold; color:#1d4ed8;"><?= (int)$r['to_score'] ?></td>
+        <td style="text-align:center; font-weight:bold; color:#1d4ed8;"><?= (int)$r['ro_score'] ?></td>
+        <td style="text-align:center; font-weight:bold; color:#1d4ed8;"><?= (int)$r['e_score'] ?></td>
+        <td style="text-align:center; font-weight:bold; color:#1d4ed8;"><?= (int)$r['o_score'] ?></td>
+        <td style="text-align:center; font-weight:bold; color:#5b21b6;"><?= (int)$r['Ds'] ?></td>
+        <td style="text-align:center; font-weight:bold; color:#5b21b6;"><?= (int)$r['Mi'] ?></td>
+        <td style="text-align:center; font-weight:bold; color:#5b21b6;"><?= (int)$r['Au'] ?></td>
+        <td style="text-align:center; font-weight:bold; color:#5b21b6;"><?= (int)$r['Co'] ?></td>
+        <td style="text-align:center; font-weight:bold; color:#5b21b6;"><?= (int)$r['Bu'] ?></td>
+        <td style="text-align:center; font-weight:bold; color:#5b21b6;"><?= (int)$r['Dv'] ?></td>
+        <td style="text-align:center; font-weight:bold; color:#5b21b6;"><?= (int)$r['Ba'] ?></td>
+        <td style="text-align:center; font-weight:bold; color:#5b21b6;"><?= (int)$r['E_dim'] ?></td>
+        <td style="text-align:center; font-weight:bold; color:#0F1E3C;"><?= htmlspecialchars($r['dominant_model'] ?? '-') ?></td>
+        <td style="text-align:center;"><?= $r['tanggal_tes'] ? date('d/m/Y', strtotime($r['tanggal_tes'])) : '-' ?></td>
     </tr>
-    <?php endwhile; ?>
+    <?php endforeach; ?>
+
+    <tr><td colspan="20" style="border:none; padding:4px;"></td></tr>
+    <tr>
+        <td colspan="20" style="font-size:9px; color:#64748B; border:1px solid #E2E8F0; background:#F8FAFC; padding:5px;">
+            <b>Dimensi Utama:</b> TO=Task Orientation &nbsp;|&nbsp; RO=Relationship Orientation &nbsp;|&nbsp; E=Extroversion &nbsp;|&nbsp; O=Openness
+        </td>
+    </tr>
+    <tr>
+        <td colspan="20" style="font-size:9px; color:#64748B; border:1px solid #E2E8F0; background:#F8FAFC; padding:5px;">
+            <b>Sub Dimensi:</b> Ds=Directing &nbsp;|&nbsp; Mi=Motivating &nbsp;|&nbsp; Au=Autonomy &nbsp;|&nbsp; Co=Coaching &nbsp;|&nbsp; Bu=Bureaucratic &nbsp;|&nbsp; Dv=Developing &nbsp;|&nbsp; Ba=Balancing &nbsp;|&nbsp; E=Empowering
+        </td>
+    </tr>
 </table>

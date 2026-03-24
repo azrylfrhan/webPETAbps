@@ -25,109 +25,142 @@ if (isset($_POST['tambah'])) {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Tambah Soal Baru</title>
-    <link rel="stylesheet" href="admin-style.css"> <style>
-        .form-container {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            max-width: 800px;
+    <title>Tambah Soal Baru | Admin BPS</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: { navy: { DEFAULT: '#0F1E3C' } }
+                }
+            }
         }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
-        .form-group input, .form-group textarea, .form-group select {
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+
+        input, textarea, select {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
+            padding: 10px 14px;
+            border: 1.5px solid #E2E8F0;
+            border-radius: 10px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 13.5px;
+            color: #0F172A;
+            background: #F8FAFC;
+            outline: none;
+            transition: all 0.2s;
         }
-        .form-group textarea { height: 80px; resize: vertical; }
-        .btn-submit {
-            background-color: #00a2e9;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.3s;
+        input:focus, textarea:focus, select:focus {
+            border-color: #2563EB;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
         }
-        .btn-submit:hover { background-color: #0086c2; }
-        .btn-cancel {
-            text-decoration: none;
-            color: #666;
-            margin-left: 15px;
-            font-size: 14px;
-        }
+        textarea { resize: vertical; min-height: 90px; }
     </style>
 </head>
-<body>
 
-<div class="sidebar"> <div class="sidebar-logo">
-        <img src="../images/logobps.png" alt="BPS">
-        <span>Admin Panel</span>
+<body class="bg-slate-100 flex min-h-screen">
+
+<?php include 'includes/sidebar.php'; ?>
+
+<div class="ml-[260px] flex-1 p-8">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
+        <div>
+            <h1 class="text-2xl font-extrabold text-navy tracking-tight">Tambah Soal Baru</h1>
+            <p class="text-slate-500 text-sm mt-1">Silakan isi detail soal untuk modul tes psikologi.</p>
+        </div>
+        <a href="kelola_soal.php"
+           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 transition-colors">
+            ← Kembali
+        </a>
     </div>
-    <nav>
-        <a href="status_pegawai.php">Status Pegawai</a>
-        <a href="kelola_soal.php" class="active">Kelola Soal</a>
-        <a href="hasil_peserta.php">Hasil Tes</a>
-        <a href="../logout.php">Logout</a>
-    </nav>
-</div>
 
-<div class="main-content">
-    <header>
-        <h1>Tambah Soal Baru</h1>
-        <p>Silakan isi detail soal untuk modul tes psikologi.</p>
-    </header>
-
+    <!-- Alert Error -->
     <?php if(isset($error)): ?>
-        <div style="color: red; margin-bottom: 20px;"><?= $error ?></div>
+    <div class="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-5 py-3.5 rounded-xl mb-6 text-sm font-medium">
+        <span class="text-lg">❌</span>
+        <?= $error ?>
+    </div>
     <?php endif; ?>
 
-    <div class="form-container">
-        <form action="" method="POST">
-            <div class="form-group">
-                <label>Jenis Tes</label>
-                <select name="kode_tes" required>
-                    <option value="KEPRIBADIAN">Kepribadian-Bagian 1</option>
-                    <option value="KEPRIBADIAN2">Kepribadian-Bagian 2</option>
-                    <option value="IQ">Tes IQ</option>
+    <!-- Form Container -->
+    <div class="max-w-2xl bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
 
+        <form action="" method="POST">
+
+            <!-- Jenis Tes -->
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Jenis Tes</label>
+                <select name="kode_tes" required>
+                    <option value="KEPRIBADIAN">Kepribadian — Bagian 1 (MSDT)</option>
+                    <option value="KEPRIBADIAN2">Kepribadian — Bagian 2 (PAPI)</option>
+                    <option value="IQ">Tes IQ</option>
                 </select>
             </div>
 
-            <div class="form-group">
-                <label>Nomor Soal</label>
+            <!-- Nomor Soal -->
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Nomor Soal</label>
                 <input type="number" name="nomor_soal" placeholder="Contoh: 1" required>
             </div>
 
-            <div class="form-group">
-                <label>Pernyataan A</label>
+            <!-- Divider -->
+            <div class="border-t border-slate-100 my-6"></div>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Isi Pernyataan</p>
+
+            <!-- Pernyataan A -->
+            <div class="mb-5">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+                    <span class="inline-flex w-5 h-5 rounded bg-blue-600 text-white text-[10px] font-black items-center justify-center mr-1">A</span>
+                    Pernyataan A
+                </label>
                 <textarea name="pertanyaan_a" placeholder="Masukkan pernyataan pilihan A..." required></textarea>
             </div>
 
-            <div class="form-group">
-                <label>Pernyataan B</label>
+            <!-- Pernyataan B -->
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+                    <span class="inline-flex w-5 h-5 rounded bg-blue-400 text-white text-[10px] font-black items-center justify-center mr-1">B</span>
+                    Pernyataan B
+                </label>
                 <textarea name="pertanyaan_b" placeholder="Masukkan pernyataan pilihan B..." required></textarea>
             </div>
 
-            <div class="form-group">
-                <label>Status Soal</label>
+            <!-- Divider -->
+            <div class="border-t border-slate-100 my-6"></div>
+
+            <!-- Status Soal -->
+            <div class="mb-8">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Status Soal</label>
                 <select name="status">
-                    <option value="aktif">Aktif</option>
-                    <option value="nonaktif">Non-Aktif</option>
+                    <option value="aktif">✅ Aktif</option>
+                    <option value="nonaktif">⛔ Non-Aktif</option>
                 </select>
             </div>
 
-            <div style="margin-top: 30px;">
-                <button type="submit" name="tambah" class="btn-submit">Simpan Soal</button>
-                <a href="kelola_soal.php" class="btn-cancel">Batal</a>
+            <!-- Actions -->
+            <div class="flex items-center gap-4">
+                <button type="submit" name="tambah"
+                        class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-md shadow-blue-200 hover:shadow-blue-300 hover:-translate-y-0.5 transition-all">
+                    💾 Simpan Soal
+                </button>
+                <a href="kelola_soal.php"
+                   class="text-sm font-semibold text-slate-400 hover:text-slate-600 transition-colors">
+                    Batal
+                </a>
             </div>
+
         </form>
     </div>
+
 </div>
 
 </body>
