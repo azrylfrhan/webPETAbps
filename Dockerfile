@@ -7,7 +7,7 @@ RUN a2enmod rewrite headers
 RUN docker-php-ext-install mysqli && docker-php-ext-enable mysqli
 
 # Install other recommended extensions
-RUN docker-php-ext-install pdo pdo_mysql
+RUN docker-php-ext-install pdo pdo_mysql zip
 
 # Set working directory
 WORKDIR /var/www/html

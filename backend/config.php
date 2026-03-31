@@ -31,27 +31,12 @@ if ($dbUrl) {
     }
 }
 
-// Local development fallback (XAMPP).
-if (!$isRailway) {
-    $host = $host ?: 'localhost';
-    $user = $user ?: 'root';
-    $pass = $pass ?? '';
-    $db   = $db ?: 'bps_psikotes';
-}
-
-if (empty($host) || empty($user) || empty($db)) {
-    $missing = [];
-    if (empty($host)) {
-        $missing[] = 'MYSQLHOST';
-    }
-    if (empty($user)) {
-        $missing[] = 'MYSQLUSER';
-    }
-    if (empty($db)) {
-        $missing[] = 'MYSQLDATABASE';
-    }
-    die('Koneksi database gagal: environment variable belum lengkap (' . implode(', ', $missing) . ').');
-}
+// Fallback: Railway initial setup or local development (XAMPP).
+// During Railway setup, MySQL might not be immediately available, so we provide defaults.
+$host = $host ?: 'localhost';
+$user = $user ?: 'root';
+$pass = $pass ?? '';
+$db   = $db ?: 'bps_psikotes';
 
 $conn = mysqli_connect($host, $user, $pass, $db, $port);
 
