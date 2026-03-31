@@ -5,7 +5,11 @@ $pass = getenv('MYSQLPASSWORD') ?: "";
 $db   = getenv('MYSQLDATABASE') ?: "bps_psikotes";
 $port = getenv('MYSQLPORT') ?: 3306;
 
-$conn = mysqli_connect($host, $user, $pass, $db, $port);
+$conn = mysqli_connect($_ENV['MYSQLHOST'],
+    $_ENV['MYSQLUSER'],
+    $_ENV['MYSQLPASSWORD'],
+    $_ENV['MYSQLDATABASE'],
+    $_ENV['MYSQLPORT']);
 
 if (!$conn) {
     die("Koneksi database gagal: " . mysqli_connect_error() . 
