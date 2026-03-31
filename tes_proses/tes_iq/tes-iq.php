@@ -1,9 +1,17 @@
 <?php
 include '../../backend/auth_check.php';
 require_once '../../backend/config.php';
+require_once '../../backend/biodata_check.php';
 
 $nip  = $_SESSION['nip'] ?? '';
 $nama = $_SESSION['nama'] ?? 'Peserta';
+
+$v_engine = @filemtime(__DIR__ . '/js/engine.js') ?: time();
+$v_ui = @filemtime(__DIR__ . '/js/ui.js') ?: time();
+$v_security = @filemtime(__DIR__ . '/js/security.js') ?: time();
+$v_timer = @filemtime(__DIR__ . '/js/timer.js') ?: time();
+
+redirectJikaBiodataBelumLengkap($conn, $nip, '../../biodata.php');
 
 // Cek apakah tes sudah selesai
 $stmt = $conn->prepare("SELECT status FROM iq_test_sessions WHERE nip = ? ORDER BY id DESC LIMIT 1");
@@ -13,7 +21,7 @@ $session = $stmt->get_result()->fetch_assoc();
 
 if ($session && $session['status'] === 'finished') {
     // Sudah selesai — redirect ke dashboard dengan pesan
-    header("Location: /bps-psikotes/dashboard.php?iq=sudah_selesai");
+    header("Location: ../../dashboard.php?iq=sudah_selesai");
     exit;
 }
 ?>
@@ -74,10 +82,10 @@ if ($session && $session['status'] === 'finished') {
         const USER = { nip: "<?= $nip ?>", nama: "<?= $nama ?>" };
     </script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="js/security.js"></script>
-    <script src="js/timer.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/engine.js"></script>
+    <script src="js/security.js?v=<?= $v_security ?>"></script>
+    <script src="js/timer.js?v=<?= $v_timer ?>"></script>
+    <script src="js/ui.js?v=<?= $v_ui ?>"></script>
+    <script src="js/engine.js?v=<?= $v_engine ?>"></script>
 
 </body>
 </html>

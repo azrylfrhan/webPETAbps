@@ -2,13 +2,31 @@
 require_once '../backend/config.php';
 include '../backend/auth_check.php';
 
-$query = "SELECT u.nama, u.nip, u.jabatan, u.satuan_kerja,
+// Get date filter parameters
+$tgl_mulai = $_GET['tgl_mulai'] ?? '';
+$tgl_akhir = $_GET['tgl_akhir'] ?? '';
+
+$where_date = '';
+if (!empty($tgl_mulai) && !empty($tgl_akhir)) {
+    $where_date = "AND DATE(h.tanggal_tes) BETWEEN '$tgl_mulai' AND '$tgl_akhir'";
+}
+
+$has_biodata = false;
+$cek_biodata = mysqli_query($conn, "SHOW TABLES LIKE 'biodata_peserta'");
+if ($cek_biodata && mysqli_num_rows($cek_biodata) > 0) {
+    $has_biodata = true;
+}
+
+$query = "SELECT u.nama, u.nip,
+                 " . ($has_biodata ? "TIMESTAMPDIFF(YEAR, b.tanggal_lahir, CURDATE())" : "NULL") . " AS usia,
+                 u.jabatan, u.satuan_kerja,
                  h.to_score, h.ro_score, h.e_score, h.o_score,
                  h.Ds, h.Mi, h.Au, h.Co, h.Bu, h.Dv, h.Ba, h.E_dim,
                  h.dominant_model, h.tanggal_tes
           FROM hasil_msdt h
           JOIN users u ON h.nip = u.nip
-          WHERE u.role = 'peserta'
+          " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+          WHERE u.role = 'peserta' $where_date
           ORDER BY u.nama ASC";
 $result = mysqli_query($conn, $query);
 $rows = [];
@@ -21,12 +39,12 @@ header("Cache-Control: max-age=0");
 <table border="1" cellpadding="5" cellspacing="0" style="border-collapse:collapse; font-family:Arial; font-size:11px;">
 
     <tr>
-        <td colspan="20" style="font-size:15px; font-weight:bold; color:#0F1E3C; border:none; padding:8px 5px 2px;">
+        <td colspan="21" style="font-size:15px; font-weight:bold; color:#0F1E3C; border:none; padding:8px 5px 2px;">
             REKAPITULASI HASIL TES 2 BAG. 1
         </td>
     </tr>
     <tr>
-        <td colspan="20" style="font-size:10px; color:#64748B; border:none; padding:0 5px 10px;">
+        <td colspan="21" style="font-size:10px; color:#64748B; border:none; padding:0 5px 10px;">
             Tanggal Export: <?= date('d F Y') ?> &nbsp;|&nbsp; Total Peserta: <?= count($rows) ?>
         </td>
     </tr>
@@ -35,6 +53,7 @@ header("Cache-Control: max-age=0");
         <td style="background-color:#0F1E3C; color:#fff; width:35px;">No</td>
         <td style="background-color:#0F1E3C; color:#fff; width:130px;">NIP</td>
         <td style="background-color:#0F1E3C; color:#fff; width:180px;">Nama Pegawai</td>
+        <td style="background-color:#0F1E3C; color:#fff; width:60px;">Usia</td>
         <td style="background-color:#0F1E3C; color:#fff; width:150px;">Jabatan</td>
         <td style="background-color:#0F1E3C; color:#fff; width:130px;">Satuan Kerja</td>
         <td style="background-color:#1E40AF; color:#fff; width:40px;">TO</td>
@@ -60,6 +79,7 @@ header("Cache-Control: max-age=0");
         <td style="text-align:center;"><?= $i+1 ?></td>
         <td style="text-align:center; font-family:monospace;">'<?= htmlspecialchars($r['nip']) ?></td>
         <td><?= htmlspecialchars($r['nama']) ?></td>
+        <td style="text-align:center;"><?= isset($r['usia']) && $r['usia'] !== null ? (int)$r['usia'] : '-' ?></td>
         <td><?= htmlspecialchars($r['jabatan'] ?? '-') ?></td>
         <td><?= htmlspecialchars($r['satuan_kerja'] ?? '-') ?></td>
         <td style="text-align:center; font-weight:bold; color:#1d4ed8;"><?= (int)$r['to_score'] ?></td>
@@ -79,14 +99,14 @@ header("Cache-Control: max-age=0");
     </tr>
     <?php endforeach; ?>
 
-    <tr><td colspan="20" style="border:none; padding:4px;"></td></tr>
+    <tr><td colspan="21" style="border:none; padding:4px;"></td></tr>
     <tr>
-        <td colspan="20" style="font-size:9px; color:#64748B; border:1px solid #E2E8F0; background:#F8FAFC; padding:5px;">
+        <td colspan="21" style="font-size:9px; color:#64748B; border:1px solid #E2E8F0; background:#F8FAFC; padding:5px;">
             <b>Dimensi Utama:</b> TO=Task Orientation &nbsp;|&nbsp; RO=Relationship Orientation &nbsp;|&nbsp; E=Extroversion &nbsp;|&nbsp; O=Openness
         </td>
     </tr>
     <tr>
-        <td colspan="20" style="font-size:9px; color:#64748B; border:1px solid #E2E8F0; background:#F8FAFC; padding:5px;">
+        <td colspan="21" style="font-size:9px; color:#64748B; border:1px solid #E2E8F0; background:#F8FAFC; padding:5px;">
             <b>Sub Dimensi:</b> Ds=Directing &nbsp;|&nbsp; Mi=Motivating &nbsp;|&nbsp; Au=Autonomy &nbsp;|&nbsp; Co=Coaching &nbsp;|&nbsp; Bu=Bureaucratic &nbsp;|&nbsp; Dv=Developing &nbsp;|&nbsp; Ba=Balancing &nbsp;|&nbsp; E=Empowering
         </td>
     </tr>

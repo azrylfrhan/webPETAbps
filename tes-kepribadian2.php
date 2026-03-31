@@ -24,7 +24,7 @@ $all_soal = [];
 while ($row = mysqli_fetch_assoc($result)) $all_soal[] = $row;
 $total = count($all_soal);
 
-define('WAKTU_DETIK', 30 * 60); // 30 menit
+define('WAKTU_DETIK', 45 * 60); // 45 menit
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -43,6 +43,40 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
         input[type="radio"] { accent-color: #1a2b5e; width: 16px; height: 16px; flex-shrink: 0; }
         .timer-warning { color: #dc2626 !important; animation: pulse 1s infinite; }
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.6; } }
+
+        /* ── MODAL ── */
+        #modal-belum-jawab {
+            display: none;
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,0.45);
+            align-items: center; justify-content: center;
+        }
+        #modal-belum-jawab.show { display: flex; }
+        #modal-belum-jawab .modal-box {
+            background: #fff; border-radius: 1.25rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            max-width: 480px; width: 90%; padding: 2rem;
+            animation: fadeIn 0.25s ease;
+        }
+        .nomor-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 2.25rem; height: 2.25rem; border-radius: 0.5rem;
+            background: #fee2e2; color: #b91c1c;
+            font-weight: 700; font-size: 0.8rem;
+            cursor: pointer; transition: background 0.15s, transform 0.1s;
+            border: 1.5px solid #fca5a5;
+        }
+        .nomor-btn:hover { background: #fca5a5; transform: scale(1.08); }
+
+        /* Highlight soal yang belum dijawab saat diklik dari modal */
+        .question-highlight {
+            animation: highlightPulse 1.6s ease;
+        }
+        @keyframes highlightPulse {
+            0%   { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); border-color: #ef4444; }
+            50%  { box-shadow: 0 0 0 8px rgba(220,38,38,0); border-color: #ef4444; }
+            100% { box-shadow: none; border-color: #e2e8f0; }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -64,7 +98,7 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
                 </div>
                 <div id="timer-box" class="hidden bg-white/10 border border-white/20 px-4 py-2 rounded-xl text-center">
                     <p class="text-[9px] font-black text-blue-200 uppercase tracking-widest">Sisa Waktu</p>
-                    <p id="timer-display" class="text-xl font-black text-white font-mono">30:00</p>
+                    <p id="timer-display" class="text-xl font-black text-white font-mono">45:00</p>
                 </div>
             </div>
         </div>
@@ -87,7 +121,7 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
                 </div>
                 <div class="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-8">
                     <span class="text-blue-600 text-xl">⏱</span>
-                    <p class="text-blue-700 text-sm font-semibold">Waktu pengerjaan: <strong>30 menit</strong>. Timer mulai saat Anda klik tombol di bawah.</p>
+                    <p class="text-blue-700 text-sm font-semibold">Waktu pengerjaan: <strong>45 menit</strong>. Timer mulai saat Anda klik tombol di bawah.</p>
                 </div>
                 <button type="button" id="start-test-btn"
                     class="bg-navy text-white px-8 py-3 rounded-xl font-semibold hover:opacity-90 transition">
@@ -111,7 +145,8 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
                 <?php foreach ($all_soal as $i => $row):
                     $no = $row['nomor_soal']; ?>
                 <div class="question-item bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-6"
-                     data-nomor="<?= $i+1 ?>" data-total="<?= $total ?>">
+                     id="soal-item-<?= $no ?>"
+                     data-nomor="<?= $i+1 ?>" data-no="<?= $no ?>" data-total="<?= $total ?>">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Soal <?= $no ?></p>
                     <label class="flex items-start gap-3 border border-slate-200 rounded-xl p-4 mb-3 cursor-pointer hover:bg-slate-50 hover:border-navy transition">
                         <input type="radio" name="jawaban_papi[<?= $no ?>]" value="A" class="mt-0.5">
@@ -125,8 +160,7 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
                 <?php endforeach; ?>
 
                 <div class="flex justify-center mt-4 mb-16">
-                    <button type="submit" id="btn-submit"
-                        onclick="return confirm('Kirim jawaban sekarang? Pastikan semua soal telah terisi.')"
+                    <button type="button" id="btn-submit"
                         class="bg-navy text-white px-10 py-3 rounded-xl font-semibold hover:opacity-90 transition">
                         Kirim Jawaban Bagian 2
                     </button>
@@ -137,12 +171,47 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
 
     </main>
 
+    <!-- ══════════════════════════════════════════
+         MODAL — Soal Belum Dijawab
+    ══════════════════════════════════════════ -->
+    <div id="modal-belum-jawab" role="dialog" aria-modal="true">
+        <div class="modal-box">
+            <div class="flex items-center gap-3 mb-1">
+                <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800">Ada Soal yang Belum Dijawab</h3>
+            </div>
+            <p class="text-slate-500 text-sm mb-1 ml-13 pl-0.5" id="modal-sub-text"></p>
+
+            <div id="nomor-belum-list" class="flex flex-wrap gap-2 mt-4 mb-6 max-h-48 overflow-y-auto pr-1"></div>
+
+            <p class="text-xs text-slate-400 mb-5">Klik nomor di atas untuk langsung menuju soal tersebut, lalu jawab sebelum mengirim.</p>
+
+            <div class="flex gap-3">
+                <button type="button" id="modal-close-btn"
+                    class="flex-1 border border-slate-300 text-slate-700 px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-slate-50 transition">
+                    Kembali ke Soal
+                </button>
+                <button type="button" id="modal-force-submit-btn"
+                    class="flex-1 bg-red-600 text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-red-700 transition">
+                    Kirim Tetap (Tidak Lengkap)
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const TOTAL_SOAL  = <?= $total ?>;
         const WAKTU_DETIK = <?= WAKTU_DETIK ?>;
         const STORAGE_KEY = 'peta_tes2b2_timer_<?= $nip ?>';
 
+        const NOMOR_SOAL_LIST = <?= json_encode(array_column($all_soal, 'nomor_soal')) ?>;
+
         let timerInterval = null;
+        let autoSubmit    = false;
 
         document.getElementById('start-test-btn').addEventListener('click', function () {
             document.getElementById('instruction-section').style.display = 'none';
@@ -156,7 +225,6 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
             let saved     = localStorage.getItem(STORAGE_KEY);
             let remaining = saved ? parseInt(saved) : WAKTU_DETIK;
             if (isNaN(remaining) || remaining <= 0) remaining = WAKTU_DETIK;
-
             updateDisplay(remaining);
 
             timerInterval = setInterval(() => {
@@ -169,8 +237,6 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
                     localStorage.removeItem(STORAGE_KEY);
                     autoSubmit = true;
                     const form = document.getElementById('form-soal');
-                    form.removeAttribute('onsubmit');
-                    document.getElementById('btn-submit').removeAttribute('onclick');
                     form.submit();
                 }
             }, 1000);
@@ -181,11 +247,84 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
             const s  = seconds % 60;
             const el = document.getElementById('timer-display');
             el.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-            if (seconds <= 300) el.classList.add('timer-warning');
+            if (seconds <= 450) el.classList.add('timer-warning');
             else el.classList.remove('timer-warning');
         }
 
-        let autoSubmit = false;
+        // ── VALIDASI & SUBMIT ──
+        function getNomorBelumDijawab() {
+            return NOMOR_SOAL_LIST.filter(no => {
+                return !document.querySelector(`input[name="jawaban_papi[${no}]"]:checked`);
+            });
+        }
+
+        document.getElementById('btn-submit').addEventListener('click', function () {
+            const belum = getNomorBelumDijawab();
+
+            if (belum.length === 0) {
+                if (confirm('Kirim jawaban sekarang? Pastikan semua soal telah terisi.')) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    clearInterval(timerInterval);
+                    document.getElementById('form-soal').submit();
+                }
+                return;
+            }
+
+            tampilkanModal(belum);
+        });
+
+        function tampilkanModal(belum) {
+            const list = document.getElementById('nomor-belum-list');
+            const sub  = document.getElementById('modal-sub-text');
+
+            list.innerHTML = '';
+            sub.textContent = `${belum.length} soal belum dijawab. Klik nomor untuk langsung menuju soal tersebut.`;
+
+            belum.forEach(no => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'nomor-btn';
+                btn.textContent = no;
+                btn.title = `Pergi ke soal nomor ${no}`;
+                btn.addEventListener('click', () => scrollKeNomor(no));
+                list.appendChild(btn);
+            });
+
+            document.getElementById('modal-belum-jawab').classList.add('show');
+        }
+
+        function scrollKeNomor(no) {
+            tutupModal();
+            const el = document.getElementById(`soal-item-${no}`);
+            if (!el) return;
+
+            const headerH = document.querySelector('header').offsetHeight + 16;
+            const top = el.getBoundingClientRect().top + window.scrollY - headerH;
+            window.scrollTo({ top, behavior: 'smooth' });
+
+            el.classList.remove('question-highlight');
+            void el.offsetWidth;
+            el.classList.add('question-highlight');
+        }
+
+        function tutupModal() {
+            document.getElementById('modal-belum-jawab').classList.remove('show');
+        }
+
+        document.getElementById('modal-close-btn').addEventListener('click', tutupModal);
+
+        document.getElementById('modal-belum-jawab').addEventListener('click', function (e) {
+            if (e.target === this) tutupModal();
+        });
+
+        document.getElementById('modal-force-submit-btn').addEventListener('click', function () {
+            if (confirm('Yakin ingin mengirim jawaban meskipun ada soal yang belum diisi?')) {
+                tutupModal();
+                localStorage.removeItem(STORAGE_KEY);
+                clearInterval(timerInterval);
+                document.getElementById('form-soal').submit();
+            }
+        });
 
         document.getElementById('form-soal').addEventListener('submit', function() {
             localStorage.removeItem(STORAGE_KEY);

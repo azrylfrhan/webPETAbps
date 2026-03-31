@@ -3,7 +3,24 @@ include '../backend/auth_check.php';
 require_once '../backend/config.php';
 
 $nip = mysqli_real_escape_string($conn, $_GET['nip']);
-$query = mysqli_query($conn, "SELECT * FROM users WHERE nip = '$nip' AND role = 'peserta'");
+$has_biodata = false;
+$cek_biodata = mysqli_query($conn, "SHOW TABLES LIKE 'biodata_peserta'");
+if ($cek_biodata && mysqli_num_rows($cek_biodata) > 0) {
+    $has_biodata = true;
+}
+
+$select_usia = $has_biodata ? "TIMESTAMPDIFF(YEAR, b.tanggal_lahir, CURDATE()) AS usia" : "NULL AS usia";
+$select_tempat_lahir = $has_biodata ? "b.tempat_lahir" : "NULL AS tempat_lahir";
+$select_tanggal_lahir = $has_biodata ? "b.tanggal_lahir" : "NULL AS tanggal_lahir";
+$select_email = $has_biodata ? "b.email" : "NULL AS email";
+$join_biodata = $has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "";
+
+$sql = "SELECT u.*, $select_usia, $select_tempat_lahir, $select_tanggal_lahir, $select_email
+        FROM users u
+        $join_biodata
+        WHERE u.nip = '$nip' AND u.role = 'peserta'";
+
+$query = mysqli_query($conn, $sql);
 $user = mysqli_fetch_assoc($query);
 
 if (!$user) { header("Location: status_pegawai.php"); exit(); }
@@ -56,6 +73,55 @@ if (!$user) { header("Location: status_pegawai.php"); exit(); }
                     </div>
                 </div>
 
+                <div class="mb-10 bg-sky-50 rounded-xl p-6 border border-sky-100">
+                    <div class="mb-4 pb-3 border-b border-sky-200">
+                        <h3 class="text-sm font-bold text-slate-700">Biodata Peserta</h3>
+                        <p class="text-xs text-slate-500 mt-1">Usia dihitung otomatis dari tanggal lahir dan tanggal hari ini.</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tempat Lahir</label>
+                        <p class="text-slate-700 font-semibold mt-2"><?= htmlspecialchars($user['tempat_lahir'] ?? '-') ?></p>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tanggal Lahir</label>
+                        <p class="text-slate-700 font-semibold mt-2"><?= !empty($user['tanggal_lahir']) ? date('d/m/Y', strtotime($user['tanggal_lahir'])) : '-' ?></p>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Usia (Otomatis)</label>
+                        <p class="text-slate-700 font-semibold mt-2"><?= isset($user['usia']) && $user['usia'] !== null ? (int)$user['usia'] . ' tahun' : '-' ?></p>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</label>
+                        <p class="text-slate-700 font-semibold mt-2 break-all"><?= htmlspecialchars($user['email'] ?? '-') ?></p>
+                    </div>
+                    </div>
+
+                    <?php if (empty($user['tanggal_lahir']) && empty($user['email']) && empty($user['tempat_lahir'])): ?>
+                    <div class="mt-5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        Biodata belum diisi oleh peserta.
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Jabatan & Pangkat Section -->
+                <div class="grid grid-cols-2 gap-6 mb-10 bg-slate-50 rounded-xl p-6 border border-slate-200">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Jabatan</label>
+                        <p id="jabatan-display" class="text-slate-700 font-semibold mt-2"><?= htmlspecialchars($user['jabatan'] ?? '-') ?></p>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pangkat/Golongan</label>
+                        <p id="pangkat-display" class="text-slate-700 font-semibold mt-2"><?= htmlspecialchars($user['pangkat_golongan'] ?? '-') ?></p>
+                    </div>
+                    <div class="col-span-2 pt-4 border-t border-slate-200">
+                        <button onclick="openEditModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm">
+                            ✏️ Edit Informasi
+                        </button>
+                    </div>
+                </div>
+
                 <div class="bg-amber-50 rounded-xl p-6 border border-amber-100">
                     <h3 class="text-amber-800 font-bold text-sm mb-1">Reset Akses Akun</h3>
                     <p class="text-amber-700/70 text-xs mb-4">Sistem akan membuatkan password acak baru secara otomatis.</p>
@@ -71,5 +137,138 @@ if (!$user) { header("Location: status_pegawai.php"); exit(); }
         </div>
     </div>
 </div>
+
+<!-- Modal Edit Informasi -->
+<div id="editModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div class="bg-navy p-6 text-white">
+            <h3 class="text-lg font-bold">Edit Informasi Pegawai</h3>
+            <p class="text-slate-400 text-sm mt-1">NIP: <?= $user['nip'] ?></p>
+        </div>
+        
+        <form id="editForm" method="POST" action="proses_edit_pegawai.php" class="p-6 space-y-5">
+            <input type="hidden" name="nip" value="<?= $user['nip'] ?>">
+            
+            <div>
+                <label class="text-sm font-semibold text-slate-700 block mb-2">Nama Lengkap</label>
+                <input type="text" 
+                       name="nama" 
+                       id="nama-input"
+                       value="<?= htmlspecialchars($user['nama'] ?? '') ?>" 
+                       class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-700"
+                       placeholder="Masukkan nama lengkap">
+            </div>
+            
+            <div>
+                <label class="text-sm font-semibold text-slate-700 block mb-2">Unit Kerja</label>
+                <input type="text" 
+                       name="satuan_kerja" 
+                       id="satuan_kerja-input"
+                       value="<?= htmlspecialchars($user['satuan_kerja'] ?? '') ?>" 
+                       class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-700"
+                       placeholder="e.g., BPS Sulawesi Utara">
+            </div>
+            
+            <div>
+                <label class="text-sm font-semibold text-slate-700 block mb-2">Jabatan</label>
+                <input type="text" 
+                       name="jabatan" 
+                       id="jabatan-input"
+                       value="<?= htmlspecialchars($user['jabatan'] ?? '') ?>" 
+                       class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-700"
+                       placeholder="e.g., Statistisi Muda">
+            </div>
+            
+            <div>
+                <label class="text-sm font-semibold text-slate-700 block mb-2">Pangkat/Golongan</label>
+                <input type="text" 
+                       name="pangkat" 
+                       id="pangkat-input"
+                       value="<?= htmlspecialchars($user['pangkat_golongan'] ?? '') ?>" 
+                       class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-700"
+                       placeholder="e.g., III/b">
+            </div>
+            
+            <div class="pt-4 border-t border-slate-200 flex gap-3">
+                <button type="button" 
+                        onclick="closeEditModal()" 
+                        class="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-all">
+                    Batal
+                </button>
+                <button type="submit" 
+                        class="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-sm">
+                    Simpan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditModal() {
+    document.getElementById('editModal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').classList.add('hidden');
+}
+
+// Close modal ketika klik di luar modal
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEditModal();
+    }
+});
+
+// Handle form submission
+document.getElementById('editForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('proses_edit_pegawai.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update display values
+            document.querySelector('.grid.grid-cols-2.gap-6.mb-10 > div:nth-child(1) > p').innerText = data.nama;
+            document.querySelector('.grid.grid-cols-2.gap-6.mb-10 > div:nth-child(2) > p').innerText = data.satuan_kerja;
+            document.getElementById('jabatan-display').innerText = data.jabatan;
+            document.getElementById('pangkat-display').innerText = data.pangkat;
+            closeEditModal();
+            
+            // Show success notification
+            showNotification('✓ Data berhasil diperbarui!', 'success');
+        } else {
+            showNotification('❌ ' + (data.error || 'Gagal menyimpan data'), 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('❌ Terjadi kesalahan: ' + error, 'error');
+    });
+});
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-6 right-6 px-6 py-3 rounded-lg text-white font-semibold shadow-lg z-50 animate-pulse
+        ${type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`;
+    notification.innerText = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Close modal dengan ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeEditModal();
+    }
+});
+</script>
 </body>
 </html>

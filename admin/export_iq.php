@@ -2,13 +2,33 @@
 include '../backend/auth_check.php';
 require_once '../backend/config.php';
 
-$stmt = $conn->prepare("
-    SELECT u.nip, u.nama, u.jabatan, u.satuan_kerja, r.skor AS total_score, r.tanggal
+// Get date filter parameters
+$tgl_mulai = $_GET['tgl_mulai'] ?? '';
+$tgl_akhir = $_GET['tgl_akhir'] ?? '';
+
+$where_date = '';
+if (!empty($tgl_mulai) && !empty($tgl_akhir)) {
+    $where_date = "AND DATE(r.tanggal) BETWEEN '$tgl_mulai' AND '$tgl_akhir'";
+}
+
+$has_biodata = false;
+$cek_biodata = mysqli_query($conn, "SHOW TABLES LIKE 'biodata_peserta'");
+if ($cek_biodata && mysqli_num_rows($cek_biodata) > 0) {
+    $has_biodata = true;
+}
+
+$sql = "
+    SELECT u.nip, u.nama,
+           " . ($has_biodata ? "TIMESTAMPDIFF(YEAR, b.tanggal_lahir, CURDATE())" : "NULL") . " AS usia,
+           u.jabatan, u.satuan_kerja, r.skor AS total_score, r.tanggal
     FROM users u
     JOIN iq_results r ON u.nip = r.user_id
-    WHERE u.role = 'peserta'
+    " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+    WHERE u.role = 'peserta' $where_date
     ORDER BY u.nama ASC
-");
+";
+
+$stmt = $conn->prepare($sql);
 $stmt->execute();
 $users = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
@@ -36,46 +56,72 @@ foreach ($users as $u) {
     $data_rows[] = array_merge($u, $r ?? []);
 }
 
-header('Content-Type: text/csv; charset=UTF-8');
-header('Content-Disposition: attachment; filename="Rekap_Hasil_Tes1_IQ_' . date('Ymd') . '.csv"');
-header('Cache-Control: max-age=0');
+// Generate Excel file (.xls format)
+header("Content-Type: application/vnd-ms-excel");
+header("Content-Disposition: attachment; filename=Rekap_Hasil_Tes-1_IQ_" . date('Ymd') . ".xls");
+header("Cache-Control: max-age=0");
+?>
+<table border="1" cellpadding="5" cellspacing="0" style="border-collapse:collapse; font-family:Arial; font-size:11px;">
 
-// BOM untuk Excel agar baca UTF-8 dengan benar
-echo "\xEF\xBB\xBF";
+    <tr>
+        <td colspan="17" style="font-size:15px; font-weight:bold; color:#0F1E3C; border:none; padding:8px 5px 2px;">
+            REKAPITULASI HASIL TES 1 (IQ) - PETA
+        </td>
+    </tr>
+    <tr>
+        <td colspan="17" style="font-size:10px; color:#64748B; border:none; padding:0 5px 10px;">
+            Tanggal Export: <?= date('d F Y') ?> &nbsp;|&nbsp; Total Peserta: <?= count($data_rows) ?>
+        </td>
+    </tr>
 
-$out = fopen('php://output', 'w');
+    <tr style="text-align:center; font-weight:bold; font-size:11px;">
+        <td style="background-color:#0F1E3C; color:#fff; width:35px;">No</td>
+        <td style="background-color:#0F1E3C; color:#fff; width:130px;">NIP</td>
+        <td style="background-color:#0F1E3C; color:#fff; width:180px;">Nama Pegawai</td>
+        <td style="background-color:#0F1E3C; color:#fff; width:60px;">Usia</td>
+        <td style="background-color:#0F1E3C; color:#fff; width:150px;">Jabatan</td>
+        <td style="background-color:#0F1E3C; color:#fff; width:130px;">Satuan Kerja</td>
+        <td style="background-color:#1E40AF; color:#fff; width:40px;">SE</td>
+        <td style="background-color:#1E40AF; color:#fff; width:40px;">WA</td>
+        <td style="background-color:#1E40AF; color:#fff; width:40px;">AN</td>
+        <td style="background-color:#1E40AF; color:#fff; width:40px;">GE</td>
+        <td style="background-color:#1E40AF; color:#fff; width:40px;">RA</td>
+        <td style="background-color:#1E40AF; color:#fff; width:40px;">ZR</td>
+        <td style="background-color:#1E40AF; color:#fff; width:40px;">FA</td>
+        <td style="background-color:#1E40AF; color:#fff; width:40px;">WU</td>
+        <td style="background-color:#1E40AF; color:#fff; width:40px;">ME</td>
+        <td style="background-color:#4C1D95; color:#fff; width:50px;">Total</td>
+        <td style="background-color:#0F1E3C; color:#fff; width:90px;">Tanggal Tes</td>
+    </tr>
 
-// Info
-fputcsv($out, ['REKAPITULASI HASIL TES 1 (IQ) - PETA']);
-fputcsv($out, ['Tanggal Export: ' . date('d F Y'), '', 'Total Peserta: ' . count($data_rows)]);
-fputcsv($out, []);
+    <?php foreach ($data_rows as $i => $row):
+        $bg = ($i % 2 === 0) ? '#FFFFFF' : '#F8FAFC';
+    ?>
+    <tr style="background-color:<?= $bg ?>; font-size:11px;">
+        <td style="text-align:center;"><?= $i+1 ?></td>
+        <td style="text-align:center; font-family:monospace;">'<?= htmlspecialchars($row['nip']) ?></td>
+        <td><?= htmlspecialchars($row['nama']) ?></td>
+        <td style="text-align:center;"><?= isset($row['usia']) && $row['usia'] !== null ? (int)$row['usia'] : '-' ?></td>
+        <td><?= htmlspecialchars($row['jabatan'] ?? '-') ?></td>
+        <td><?= htmlspecialchars($row['satuan_kerja'] ?? '-') ?></td>
+        <td style="text-align:center; font-weight:bold; color:#1d4ed8;"><?= (int)($row['SE'] ?? 0) ?></td>
+        <td style="text-align:center; font-weight:bold; color:#1d4ed8;"><?= (int)($row['WA'] ?? 0) ?></td>
+        <td style="text-align:center; font-weight:bold; color:#1d4ed8;"><?= (int)($row['AN'] ?? 0) ?></td>
+        <td style="text-align:center; font-weight:bold; color:#1d4ed8;"><?= (int)($row['GE'] ?? 0) ?></td>
+        <td style="text-align:center; font-weight:bold; color:#1d4ed8;"><?= (int)($row['RA'] ?? 0) ?></td>
+        <td style="text-align:center; font-weight:bold; color:#1d4ed8;"><?= (int)($row['ZR'] ?? 0) ?></td>
+        <td style="text-align:center; font-weight:bold; color:#1d4ed8;"><?= (int)($row['FA'] ?? 0) ?></td>
+        <td style="text-align:center; font-weight:bold; color:#1d4ed8;"><?= (int)($row['WU'] ?? 0) ?></td>
+        <td style="text-align:center; font-weight:bold; color:#1d4ed8;"><?= (int)($row['ME'] ?? 0) ?></td>
+        <td style="text-align:center; font-weight:bold; color:#5b21b6;"><?= (int)($row['total_score'] ?? 0) ?></td>
+        <td style="text-align:center;"><?= $row['tanggal'] ? date('d/m/Y', strtotime($row['tanggal'])) : '-' ?></td>
+    </tr>
+    <?php endforeach; ?>
 
-// Header
-fputcsv($out, ['No','NIP','Nama Pegawai','Jabatan','Satuan Kerja','SE','WA','AN','GE','RA','ZR','FA','WU','ME','Total','Tanggal Tes']);
-
-// Data
-foreach ($data_rows as $i => $row) {
-    fputcsv($out, [
-        $i + 1,
-        $row['nip'],
-        $row['nama'],
-        $row['jabatan'] ?? '-',
-        $row['satuan_kerja'] ?? '-',
-        (int)($row['SE'] ?? 0),
-        (int)($row['WA'] ?? 0),
-        (int)($row['AN'] ?? 0),
-        (int)($row['GE'] ?? 0),
-        (int)($row['RA'] ?? 0),
-        (int)($row['ZR'] ?? 0),
-        (int)($row['FA'] ?? 0),
-        (int)($row['WU'] ?? 0),
-        (int)($row['ME'] ?? 0),
-        (int)($row['total_score'] ?? 0),
-        $row['tanggal'] ? date('d/m/Y', strtotime($row['tanggal'])) : '-',
-    ]);
-}
-
-fputcsv($out, []);
-fputcsv($out, ['Keterangan: SE=Melengkapi Kalimat | WA=Mencari Kata Berbeda | AN=Hubungan Kata | GE=Kesamaan Kata | RA=Hitungan Praktis | ZR=Deret Angka | FA=Potongan Gambar | WU=Kemampuan Ruang | ME=Mengingat Kata']);
-
-fclose($out);
+    <tr><td colspan="17" style="border:none; padding:4px;"></td></tr>
+    <tr>
+        <td colspan="17" style="font-size:9px; color:#64748B; border:1px solid #E2E8F0; background:#F8FAFC; padding:5px;">
+            <b>Keterangan:</b> SE=Melengkapi Kalimat &nbsp;|&nbsp; WA=Mencari Kata Berbeda &nbsp;|&nbsp; AN=Hubungan Kata &nbsp;|&nbsp; GE=Kesamaan Kata &nbsp;|&nbsp; RA=Hitungan Praktis &nbsp;|&nbsp; ZR=Deret Angka &nbsp;|&nbsp; FA=Potongan Gambar &nbsp;|&nbsp; WU=Kemampuan Ruang &nbsp;|&nbsp; ME=Mengingat Kata
+        </td>
+    </tr>
+</table>

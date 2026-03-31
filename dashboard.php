@@ -1,10 +1,22 @@
 <?php
 require_once 'backend/auth_check.php'; 
 require_once 'backend/config.php';
+require_once 'backend/biodata_check.php';
 
 $nama = $_SESSION['nama'] ?? 'User';
 $nip = $_SESSION['nip'] ?? '-';
 $satuan_kerja = $_SESSION['satuan_kerja'] ?? 'BPS Sulawesi Utara'; 
+
+if (($_SESSION['role'] ?? 'peserta') !== 'admin') {
+    redirectJikaBiodataBelumLengkap($conn, $nip, 'biodata.php');
+}
+
+// Cek apakah Tes 1 (IQ) sudah selesai
+$cek_iq = $conn->prepare("SELECT status FROM iq_test_sessions WHERE nip = ? ORDER BY id DESC LIMIT 1");
+$cek_iq->bind_param("s", $nip);
+$cek_iq->execute();
+$iq_session = $cek_iq->get_result()->fetch_assoc();
+$tes1_selesai = $iq_session && $iq_session['status'] === 'finished';
 
 $cek_bagian1 = mysqli_query($conn, "SELECT id FROM hasil_msdt WHERE nip = '$nip' AND Ds IS NOT NULL");
 $sudah_bagian1 = mysqli_num_rows($cek_bagian1) > 0;
@@ -16,7 +28,11 @@ $url_tes2 = "tes-kepribadian.php";
 $label_tes2 = "Mulai Tes 2 →";
 $status_kelas2 = "btn-purple";
 
-if ($sudah_bagian1 && !$sudah_bagian2) {
+if (!$tes1_selesai) {
+    $url_tes2 = "#";
+    $label_tes2 = "🔒 Selesaikan Tes 1 Dulu";
+    $status_kelas2 = "btn-disabled";
+} elseif ($sudah_bagian1 && !$sudah_bagian2) {
     $url_tes2 = "tes-kepribadian2.php";
     $label_tes2 = "Lanjut ke Bagian 2 →";
 } elseif ($sudah_bagian1 && $sudah_bagian2) {
@@ -64,24 +80,27 @@ if ($sudah_bagian1 && !$sudah_bagian2) {
 
 <main class="container">
 
-    <?php
-    // Cek apakah Tes 1 (IQ) sudah selesai
-    $cek_iq = $conn->prepare("SELECT status FROM iq_test_sessions WHERE nip = ? ORDER BY id DESC LIMIT 1");
-    $cek_iq->bind_param("s", $nip);
-    $cek_iq->execute();
-    $iq_session = $cek_iq->get_result()->fetch_assoc();
-    $tes1_selesai = $iq_session && $iq_session['status'] === 'finished';
-    ?>
-
     <?php if (isset($_GET['iq']) && $_GET['iq'] == 'sudah_selesai'): ?>
         <div class="alert-success">
             ✓ Tes 1 sudah pernah Anda kerjakan sebelumnya.
         </div>
     <?php endif; ?>
 
+    <?php if (isset($_GET['error']) && $_GET['error'] == 'tes1_belum_selesai'): ?>
+        <div class="alert-success" style="background:#fff8e1; color:#9a6700; border-left:4px solid #f59e0b;">
+            ⚠ Tes 2 masih terkunci. Silakan selesaikan Tes 1 terlebih dahulu.
+        </div>
+    <?php endif; ?>
+
     <?php if (isset($_GET['status']) && $_GET['status'] == 'tes_selesai'): ?>
         <div class="alert-success">
             ✓ <strong>Terima Kasih!</strong> Seluruh rangkaian tes Anda telah berhasil disimpan.
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['biodata']) && $_GET['biodata'] == 'ok'): ?>
+        <div class="alert-success">
+            ✓ Biodata berhasil disimpan. Anda sekarang bisa mulai mengerjakan tes.
         </div>
     <?php endif; ?>
 
@@ -141,7 +160,8 @@ if ($sudah_bagian1 && !$sudah_bagian2) {
                         <span>Status</span>
                         <strong>
                             <?php
-                                if (!$sudah_bagian1) echo "Belum Mulai";
+                                if (!$tes1_selesai) echo "Terkunci";
+                                elseif (!$sudah_bagian1) echo "Belum Mulai";
                                 elseif (!$sudah_bagian2) echo "Bagian 1 Selesai";
                                 else echo "Selesai";
                             ?>

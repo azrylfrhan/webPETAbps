@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'config.php'; 
+require_once 'biodata_check.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Sanitasi input
@@ -40,7 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if ($user['role'] == 'admin') {
                 header("Location: ../admin/index.php");
             } else {
-                header("Location: ../dashboard.php");
+                if (!biodataTableExists($conn) || !pesertaSudahIsiBiodata($conn, $user['nip'])) {
+                    header("Location: ../biodata.php");
+                } else {
+                    header("Location: ../dashboard.php");
+                }
             }
             exit();
 

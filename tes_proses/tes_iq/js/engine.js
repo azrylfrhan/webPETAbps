@@ -10,6 +10,8 @@ let waktuHafalan         = 0;
 let timerInterval        = null;
 let remainingTime        = 0;
 
+const IQ_API_BASE = 'api';
+
 const STORAGE_KEY = `peta_progress_${USER.nip}`;
 
 /* =========================================================
@@ -47,12 +49,12 @@ function clearProgress() {
 ========================================================= */
 
 function startSession() {
-    fetch(`/bps-psikotes/tes_proses/tes_iq/api/start_session.php`, { method: "POST" });
+    fetch(`${IQ_API_BASE}/start_session.php`, { method: "POST" });
 }
 
 function finishSession() {
     // keepalive agar request tetap jalan walau halaman mau pindah
-    fetch(`/bps-psikotes/tes_proses/tes_iq/api/finish_session.php`, {
+    fetch(`${IQ_API_BASE}/finish_session.php`, {
         method: "POST",
         keepalive: true
     });
@@ -77,7 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
             sectionTime          = saved.sectionTime;
             remainingTime        = saved.remainingTime > 0 ? saved.remainingTime : saved.sectionTime;
 
-            fetch(`/bps-psikotes/tes_proses/tes_iq/api/get_section.php?id=${globalSectionId}`)
+            fetch(`${IQ_API_BASE}/get_section.php?id=${globalSectionId}`)
                 .then(res => res.text())
                 .then(text => {
                     let data;
@@ -101,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
 ========================================================= */
 
 function loadSection(id) {
-    fetch(`/bps-psikotes/tes_proses/tes_iq/api/get_section.php?id=${id}`)
+    fetch(`${IQ_API_BASE}/get_section.php?id=${id}`)
         .then(res => res.text())
         .then(text => {
             let data;
@@ -135,7 +137,7 @@ function loadSection(id) {
 ========================================================= */
 
 function loadMemoryItems(sectionDbId) {
-    fetch(`/bps-psikotes/tes_proses/tes_iq/api/get_memory.php?section_id=${sectionDbId}`)
+    fetch(`${IQ_API_BASE}/get_memory.php?section_id=${sectionDbId}`)
         .then(res => res.text())
         .then(text => {
             let data;
@@ -170,7 +172,7 @@ function loadQuestion() {
 
     saveProgress();
 
-    fetch(`/bps-psikotes/tes_proses/tes_iq/api/get_questions.php?section=${globalSectionId}&q=${globalQuestionNumber}`)
+    fetch(`${IQ_API_BASE}/get_questions.php?section=${globalSectionId}&q=${globalQuestionNumber}`)
         .then(res => res.text())
         .then(text => {
             let data;
@@ -189,7 +191,7 @@ function loadQuestion() {
 ========================================================= */
 
 function saveAnswer(questionId, label) {
-    fetch(`/bps-psikotes/tes_proses/tes_iq/api/save_answer.php`, {
+    fetch(`${IQ_API_BASE}/save_answer.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question_id: questionId, answer: label })
@@ -216,7 +218,7 @@ function nextSection() {
 
     const nextId = globalSectionId + 1;
 
-    fetch(`/bps-psikotes/tes_proses/tes_iq/api/get_section.php?id=${nextId}`)
+    fetch(`${IQ_API_BASE}/get_section.php?id=${nextId}`)
         .then(res => res.text())
         .then(text => {
             let data;
@@ -279,7 +281,7 @@ function finishTest() {
     }
 
     // Memanggil API finish_test.php untuk menghitung dan menyimpan skor ke database
-    fetch(`/bps-psikotes/tes_proses/tes_iq/api/finish_test.php`)
+    fetch(`${IQ_API_BASE}/finish_test.php`)
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success') {

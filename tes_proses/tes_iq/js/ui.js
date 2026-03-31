@@ -2,9 +2,9 @@
    UI CONTROLLER
 ========================================================= */
 
-const BASE      = "/bps-psikotes";
-const IMG_SOAL  = `${BASE}/images/img_soal/`;
-const IMG_SEC   = `${BASE}/`;
+const API_BASE  = 'api';
+const IMG_SOAL  = '../../images/img_soal/';
+const IMG_SEC   = '../../';
 
 let CURRENT_EXAMPLE = null;
 
@@ -352,7 +352,7 @@ renderQuestion(data, nomor, total){
 
     // Load jawaban terakhir & highlight
     if (hasOptions) {
-        fetch(`/bps-psikotes/tes_proses/tes_iq/api/get_last_answer.php?question_id=${data.id}`)
+        fetch(`${API_BASE}/get_last_answer.php?question_id=${data.id}`)
             .then(r => r.json())
             .then(res => {
                 if (!res.answer) return;
@@ -369,7 +369,7 @@ renderQuestion(data, nomor, total){
     } else {
         const inputEl = document.getElementById(`soal-input-${data.id}`);
         // Load jawaban isian sebelumnya
-        fetch(`/bps-psikotes/tes_proses/tes_iq/api/get_last_answer.php?question_id=${data.id}`)
+        fetch(`${API_BASE}/get_last_answer.php?question_id=${data.id}`)
             .then(r => r.json())
             .then(res => { if (res.answer) inputEl.value = res.answer; })
             .catch(() => {});
@@ -399,7 +399,7 @@ renderQuestion(data, nomor, total){
 async renderFinish(){
     // Tunggu finish_session selesai dulu sebelum tampil tombol dashboard
     try {
-        await fetch(`/bps-psikotes/tes_proses/tes_iq/api/finish_session.php`, {
+        await fetch(`${API_BASE}/finish_session.php`, {
             method: "POST", keepalive: true
         });
     } catch(e) {}
@@ -414,7 +414,7 @@ async renderFinish(){
             </div>
             <h2 class="text-2xl font-bold text-navy mb-3">Tes Selesai</h2>
             <p class="text-slate-500 mb-8">Terima kasih telah menyelesaikan tes. Hasil Anda telah berhasil disimpan.</p>
-            <a href="${BASE}/dashboard.php"
+            <a href="../../dashboard.php"
                 class="inline-block bg-navy text-white px-8 py-3 rounded-xl font-semibold hover:opacity-90 transition">
                 Kembali ke Dashboard
             </a>

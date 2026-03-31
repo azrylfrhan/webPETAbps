@@ -234,6 +234,12 @@ while ($r = mysqli_fetch_assoc($result)) {
             </button>
         </div>
         <div id="ip" class="hidden mt-4 pt-4 border-t border-slate-100">
+            <div class="mb-3">
+                <a href="../formatregisPETA.xlsx" download
+                    class="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-100 transition">
+                    ⬇ Download Template Import
+                </a>
+            </div>
             <form method="POST" enctype="multipart/form-data" class="flex items-center gap-3">
                 <input type="file" name="csv_file" accept=".csv,.xlsx,.xls" required
                     class="text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 file:font-semibold hover:file:bg-slate-200 cursor-pointer">

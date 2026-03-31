@@ -1,5 +1,5 @@
 <?php
-require_once 'config.php';
+require_once '../backend/config.php';
 require_once 'proses_papi.php'; 
 
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
