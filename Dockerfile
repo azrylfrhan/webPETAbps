@@ -6,6 +6,8 @@ RUN a2enmod rewrite headers
 # Install system dependencies for extensions
 RUN apt-get update && apt-get install -y \
     libzip-dev \
+    zlib1g-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Install MySQLi extension
