@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['nama']         = $user['nama'];
             $_SESSION['role']         = $user['role'];
             $_SESSION['jabatan']      = $user['jabatan'];
-            $_SESSION['pangkat']      = $user['pangkat']; // Data pangkat masuk ke session
+            $_SESSION['pangkat_golongan']      = $user['pangkat_golongan']; // Data pangkat masuk ke session
             $_SESSION['satuan_kerja'] = $user['satuan_kerja'];
 
             // 5. Redirect berdasarkan Role
