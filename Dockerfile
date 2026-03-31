@@ -3,6 +3,11 @@ FROM php:8.1-apache
 # Enable Apache modules
 RUN a2enmod rewrite headers
 
+# Install system dependencies for extensions
+RUN apt-get update && apt-get install -y \
+    libzip-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install MySQLi extension
 RUN docker-php-ext-install mysqli && docker-php-ext-enable mysqli
 
