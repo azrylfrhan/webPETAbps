@@ -1,12 +1,14 @@
 <?php
 // Pengaturan Database
-$host = "localhost";
-$user = "root";
-$pass = "";
-$db   = "bps_psikotes";
+// Priority: Environment variables (Railway) > Fallback: Localhost (XAMPP)
+$host = getenv('MYSQLHOST') ?: "localhost";
+$user = getenv('MYSQLUSER') ?: "root";
+$pass = getenv('MYSQLPASSWORD') ?: "";
+$db   = getenv('MYSQLDATABASE') ?: "bps_psikotes";
+$port = getenv('MYSQLPORT') ?: 3306;
 
 // Membuat Koneksi dengan MySQLi
-$conn = mysqli_connect($host, $user, $pass, $db);
+$conn = mysqli_connect($host, $user, $pass, $db, $port);
 
 // Periksa Koneksi
 if (!$conn) {

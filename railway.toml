@@ -1,0 +1,20 @@
+[build]
+builder = "dockerfile"
+
+[deploy]
+startCommand = "php -S 0.0.0.0:8080"
+healthcheckPath = "/"
+healthcheckInterval = 10
+healthcheckTimeout = 5
+
+[env]
+# Database variables sudah ada di Railway MySQL plugin
+# MYSQLHOST
+# MYSQLPORT
+# MYSQLUSER
+# MYSQLPASSWORD
+# MYSQLDATABASE
+
+# Tambahan untuk PHP
+PHP_VERSION = "8.1"
+PORT = "8080"
