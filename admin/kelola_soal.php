@@ -72,6 +72,18 @@ while($row = mysqli_fetch_assoc($result)) {
         </a>
     </div>
 
+        <!-- Search Nomor Soal -->
+        <div class="mb-5">
+            <div class="relative max-w-sm">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">#</span>
+                <input id="search-no" type="text" inputmode="numeric" placeholder="Cari nomor soal, contoh: 12"
+                    class="w-full pl-8 pr-8 py-2.5 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all">
+                <button type="button" id="clear-no" onclick="clearNoSearch()"
+                    class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 text-sm">✕</button>
+            </div>
+            <p class="text-xs text-slate-400 mt-2">Pencarian berlaku untuk tab yang sedang aktif.</p>
+        </div>
+
     <!-- Tabs -->
     <div class="flex items-center gap-1 border-b-2 border-slate-200 mb-6">
         <button class="tab-btn active px-5 py-2.5 text-sm font-semibold text-blue-600 rounded-t-lg"
@@ -107,7 +119,7 @@ while($row = mysqli_fetch_assoc($result)) {
         <?php else: ?>
         <div class="space-y-4">
             <?php foreach($soals['KEPRIBADIAN'] as $s): ?>
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <div class="question-card bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow" data-no="<?= (int)$s['nomor_soal'] ?>">
                 <!-- Card Header -->
                 <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50">
                     <div class="flex items-center gap-3">
@@ -142,6 +154,7 @@ while($row = mysqli_fetch_assoc($result)) {
             </div>
             <?php endforeach; ?>
         </div>
+        <div class="search-empty hidden text-center py-12 text-slate-400 text-sm">Nomor soal tidak ditemukan di tab ini.</div>
         <?php endif; ?>
     </div>
 
@@ -155,7 +168,7 @@ while($row = mysqli_fetch_assoc($result)) {
         <?php else: ?>
         <div class="space-y-4">
             <?php foreach($soals['KEPRIBADIAN2'] as $s): ?>
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <div class="question-card bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow" data-no="<?= (int)$s['nomor_soal'] ?>">
                 <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50">
                     <div class="flex items-center gap-3">
                         <span class="w-8 h-8 rounded-lg bg-amber-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
@@ -188,6 +201,7 @@ while($row = mysqli_fetch_assoc($result)) {
             </div>
             <?php endforeach; ?>
         </div>
+        <div class="search-empty hidden text-center py-12 text-slate-400 text-sm">Nomor soal tidak ditemukan di tab ini.</div>
         <?php endif; ?>
     </div>
 
@@ -205,7 +219,7 @@ while($row = mysqli_fetch_assoc($result)) {
         <?php else: ?>
         <div class="space-y-4">
             <?php foreach($soals['IQ'] as $s): ?>
-            <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <div class="question-card bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow" data-no="<?= (int)$s['nomor_soal'] ?>">
                 <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-amber-50">
                     <div class="flex items-center gap-3">
                         <span class="w-8 h-8 rounded-lg bg-amber-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
@@ -243,12 +257,46 @@ while($row = mysqli_fetch_assoc($result)) {
             </div>
             <?php endforeach; ?>
         </div>
+        <div class="search-empty hidden text-center py-12 text-slate-400 text-sm">Nomor soal tidak ditemukan di tab ini.</div>
         <?php endif; ?>
     </div>
 
 </div>
 
 <script>
+    function applyNoSearch() {
+        const input = document.getElementById('search-no');
+        const kw = input.value.trim();
+        document.getElementById('clear-no').classList.toggle('hidden', kw === '');
+
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            const isActive = tab.classList.contains('active');
+            const cards = tab.querySelectorAll('.question-card');
+            if (!cards.length) return;
+
+            let visible = 0;
+            cards.forEach(card => {
+                const no = card.dataset.no || '';
+                const match = (kw === '') || no.includes(kw);
+                card.classList.toggle('hidden', !match || !isActive);
+                if (match && isActive) visible++;
+            });
+
+            const empty = tab.querySelector('.search-empty');
+            if (empty) {
+                empty.classList.toggle('hidden', kw === '' || visible > 0 || !isActive);
+            }
+        });
+    }
+
+    function clearNoSearch() {
+        document.getElementById('search-no').value = '';
+        applyNoSearch();
+        document.getElementById('search-no').focus();
+    }
+
+    document.getElementById('search-no').addEventListener('input', applyNoSearch);
+
     function openTab(evt, tabName) {
         // Sembunyikan semua tab content
         document.querySelectorAll('.tab-content').forEach(el => {
@@ -268,7 +316,11 @@ while($row = mysqli_fetch_assoc($result)) {
         // Aktifkan button yang diklik
         evt.currentTarget.classList.add('active', 'text-blue-600');
         evt.currentTarget.classList.remove('text-slate-400');
+
+        applyNoSearch();
     }
+
+    applyNoSearch();
 </script>
 
 </body>
