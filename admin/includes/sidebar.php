@@ -39,6 +39,12 @@ $current = basename($_SERVER['PHP_SELF']);
             <span>📄</span> Hasil Tes
         </a>
 
+        <a href="kelola_soal.php"
+           class="relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-[13.5px] font-medium transition-all duration-200
+                  <?= in_array($current, ['kelola_soal.php', 'tambah_soal.php', 'edit_soal.php', 'hapus_soal.php']) ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-900/40' : 'text-slate-400 hover:text-white hover:bg-white/5' ?>">
+            <span>🧠</span> Kelola Soal Kepribadian
+        </a>
+
         <p class="px-4 pt-4 pb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">Pengaturan</p>
 
         <a href="../logout.php"
