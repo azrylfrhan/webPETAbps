@@ -412,11 +412,35 @@ while ($r = mysqli_fetch_assoc($result)) {
 
 <script>
 // CHECKBOX
+function getVisibleCheckboxes() {
+    return Array.from(document.querySelectorAll('.row:not(.hidden) .cb'));
+}
+
+function syncSelectAllState() {
+    const sa = document.getElementById('sa');
+    const visible = getVisibleCheckboxes();
+    if (visible.length === 0) {
+        sa.checked = false;
+        sa.indeterminate = false;
+        return;
+    }
+
+    const checkedCount = visible.filter(c => c.checked).length;
+    sa.checked = checkedCount === visible.length;
+    sa.indeterminate = checkedCount > 0 && checkedCount < visible.length;
+}
+
 document.getElementById('sa').addEventListener('change', function() {
-    document.querySelectorAll('.cb').forEach(c => c.checked = this.checked);
+    const visible = getVisibleCheckboxes();
+    visible.forEach(c => c.checked = this.checked);
+    syncSelectAllState();
     updBar();
 });
-document.querySelectorAll('.cb').forEach(c => c.addEventListener('change', updBar));
+
+document.querySelectorAll('.cb').forEach(c => c.addEventListener('change', function() {
+    syncSelectAllState();
+    updBar();
+}));
 
 function updBar() {
     const n   = document.querySelectorAll('.cb:checked').length;
@@ -428,6 +452,7 @@ function updBar() {
 
 function clearAll() {
     document.querySelectorAll('.cb, #sa').forEach(c => c.checked = false);
+    document.getElementById('sa').indeterminate = false;
     updBar();
 }
 
@@ -454,6 +479,8 @@ function doSearch() {
     document.getElementById('info-row').textContent = kw
         ? `Menampilkan ${vis} dari <?= $total ?> pegawai`
         : `Menampilkan <?= $total ?> pegawai`;
+
+    syncSelectAllState();
 }
 
 function clearSearch() {
@@ -467,6 +494,8 @@ document.addEventListener('keydown', e => {
         e.preventDefault(); document.getElementById('q').focus();
     }
 });
+
+syncSelectAllState();
 </script>
 </body>
 </html>
