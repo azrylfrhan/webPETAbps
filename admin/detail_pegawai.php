@@ -24,6 +24,23 @@ $query = mysqli_query($conn, $sql);
 $user = mysqli_fetch_assoc($query);
 
 if (!$user) { header("Location: status_pegawai.php"); exit(); }
+
+$riwayatTes = [];
+$has_riwayat_tes = false;
+$cek_riwayat = mysqli_query($conn, "SHOW TABLES LIKE 'riwayat_alasan_tes'");
+if ($cek_riwayat && mysqli_num_rows($cek_riwayat) > 0) {
+    $has_riwayat_tes = true;
+    $stmtRiwayat = $conn->prepare("SELECT created_at, alasan_tes FROM riwayat_alasan_tes WHERE nip = ? ORDER BY created_at DESC");
+    if ($stmtRiwayat) {
+        $stmtRiwayat->bind_param('s', $nip);
+        $stmtRiwayat->execute();
+        $resRiwayat = $stmtRiwayat->get_result();
+        while ($r = $resRiwayat->fetch_assoc()) {
+            $riwayatTes[] = $r;
+        }
+        $stmtRiwayat->close();
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -132,6 +149,40 @@ if (!$user) { header("Location: status_pegawai.php"); exit(); }
                             Reset Password
                         </button>
                     </form>
+                </div>
+
+                <div class="mt-8 bg-white rounded-xl p-6 border border-slate-200">
+                    <h3 class="text-sm font-bold text-slate-700">Riwayat Mengikuti Tes</h3>
+                    <p class="text-xs text-slate-500 mt-1 mb-4">Menampilkan tanggal mengikuti tes dan alasan pada tanggal tersebut.</p>
+
+                    <?php if (!$has_riwayat_tes): ?>
+                        <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                            Tabel riwayat alasan tes belum tersedia.
+                        </div>
+                    <?php elseif (empty($riwayatTes)): ?>
+                        <div class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                            Belum ada riwayat alasan tes untuk pegawai ini.
+                        </div>
+                    <?php else: ?>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="border-b border-slate-200">
+                                        <th class="text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider py-2 pr-3">Tanggal Mengikuti Tes</th>
+                                        <th class="text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider py-2">Alasan Mengikuti Tes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($riwayatTes as $item): ?>
+                                    <tr class="border-b border-slate-100 align-top">
+                                        <td class="py-3 pr-3 text-slate-600 whitespace-nowrap"><?= date('d/m/Y H:i', strtotime($item['created_at'])) ?></td>
+                                        <td class="py-3 text-slate-700 leading-relaxed"><?= nl2br(htmlspecialchars($item['alasan_tes'])) ?></td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

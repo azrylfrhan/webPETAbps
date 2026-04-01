@@ -22,24 +22,18 @@ if (!biodataTableExists($conn)) {
     exit;
 }
 
+if (!ensureAlasanTesTable($conn)) {
+    header('Location: ../biodata.php?error=save_failed');
+    exit;
+}
+
 $tempatLahir = trim($_POST['tempat_lahir'] ?? '');
 $tanggalLahir = trim($_POST['tanggal_lahir'] ?? '');
 $email = trim($_POST['email'] ?? '');
+$alasanTes = trim($_POST['alasan_tes'] ?? '');
 
-if ($tempatLahir === '' || $tanggalLahir === '' || $email === '') {
-    header('Location: ../biodata.php?error=empty');
-    exit;
-}
-
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    header('Location: ../biodata.php?error=invalid_email');
-    exit;
-}
-
-$dt = DateTime::createFromFormat('Y-m-d', $tanggalLahir);
-$validDate = $dt && $dt->format('Y-m-d') === $tanggalLahir;
-if (!$validDate || $tanggalLahir > date('Y-m-d')) {
-    header('Location: ../biodata.php?error=invalid_date');
+if ($alasanTes === '') {
+    header('Location: ../biodata.php?error=empty_reason');
     exit;
 }
 
@@ -49,19 +43,53 @@ $cek->execute();
 $exists = $cek->get_result()->fetch_assoc();
 $cek->close();
 
-if (!empty($exists)) {
-    header('Location: ../biodata.php?error=already_exists');
-    exit;
+$isBiodataBaru = empty($exists);
+
+if ($isBiodataBaru) {
+    if ($tempatLahir === '' || $tanggalLahir === '' || $email === '') {
+        header('Location: ../biodata.php?error=empty');
+        exit;
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        header('Location: ../biodata.php?error=invalid_email');
+        exit;
+    }
+
+    $dt = DateTime::createFromFormat('Y-m-d', $tanggalLahir);
+    $validDate = $dt && $dt->format('Y-m-d') === $tanggalLahir;
+    if (!$validDate || $tanggalLahir > date('Y-m-d')) {
+        header('Location: ../biodata.php?error=invalid_date');
+        exit;
+    }
 }
 
-$sql = 'INSERT INTO biodata_peserta (nip, tempat_lahir, tanggal_lahir, email) VALUES (?, ?, ?, ?)';
-$stmt = $conn->prepare($sql);
-$stmt->bind_param('ssss', $nip, $tempatLahir, $tanggalLahir, $email);
+$conn->begin_transaction();
 
-if ($stmt->execute()) {
+try {
+    if ($isBiodataBaru) {
+        $sql = 'INSERT INTO biodata_peserta (nip, tempat_lahir, tanggal_lahir, email) VALUES (?, ?, ?, ?)';
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('ssss', $nip, $tempatLahir, $tanggalLahir, $email);
+        if (!$stmt->execute()) {
+            throw new Exception('Gagal menyimpan biodata.');
+        }
+        $stmt->close();
+    }
+
+    $sqlAlasan = 'INSERT INTO riwayat_alasan_tes (nip, alasan_tes) VALUES (?, ?)';
+    $stmtAlasan = $conn->prepare($sqlAlasan);
+    $stmtAlasan->bind_param('ss', $nip, $alasanTes);
+    if (!$stmtAlasan->execute()) {
+        throw new Exception('Gagal menyimpan alasan tes.');
+    }
+    $stmtAlasan->close();
+
+    $conn->commit();
     header('Location: ../dashboard.php?biodata=ok');
     exit;
+} catch (Exception $e) {
+    $conn->rollback();
+    header('Location: ../biodata.php?error=save_failed');
+    exit;
 }
-
-header('Location: ../biodata.php?error=save_failed');
-exit;

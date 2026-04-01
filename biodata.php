@@ -14,18 +14,22 @@ $nama = $_SESSION['nama'] ?? 'Peserta';
 
 $setupMissing = isset($_GET['setup']) && $_GET['setup'] === 'missing_table';
 $biodataAda = false;
+$biodata = [
+    'tempat_lahir' => '',
+    'tanggal_lahir' => '',
+    'email' => ''
+];
 
 if (biodataTableExists($conn) && !empty($nip)) {
     $stmt = $conn->prepare("SELECT tempat_lahir, tanggal_lahir, email FROM biodata_peserta WHERE nip = ? LIMIT 1");
     $stmt->bind_param("s", $nip);
     $stmt->execute();
-    $biodata = $stmt->get_result()->fetch_assoc();
+    $found = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    if (!empty($biodata)) {
+    if (!empty($found)) {
         $biodataAda = true;
-        header('Location: dashboard.php');
-        exit;
+        $biodata = $found;
     }
 }
 ?>
@@ -82,8 +86,14 @@ if (biodataTableExists($conn) && !empty($nip)) {
     <div class="auth-card">
         <h2>Lengkapi Biodata</h2>
         <p style="text-align:center; color:#64748b; margin-bottom: 18px; font-size: 14px;">
-            Isi biodata satu kali untuk melanjutkan ke halaman tes.
+            Isi biodata satu kali, lalu isi alasan mengikuti tes setiap kali akan mulai tes.
         </p>
+
+        <?php if ($biodataAda): ?>
+            <div class="success-msg">
+                Biodata sudah tersimpan. Anda hanya perlu mengisi alasan mengikuti tes untuk melanjutkan.
+            </div>
+        <?php endif; ?>
 
         <?php if ($setupMissing): ?>
             <div class="danger-msg">
@@ -104,8 +114,8 @@ if (biodataTableExists($conn) && !empty($nip)) {
                         echo 'Format email tidak valid.';
                     } elseif ($_GET['error'] === 'invalid_date') {
                         echo 'Tanggal lahir tidak valid.';
-                    } elseif ($_GET['error'] === 'already_exists') {
-                        echo 'Biodata Anda sudah pernah disimpan.';
+                    } elseif ($_GET['error'] === 'empty_reason') {
+                        echo 'Alasan mengikuti tes wajib diisi.';
                     } else {
                         echo 'Gagal menyimpan biodata. Silakan coba lagi.';
                     }
@@ -121,22 +131,53 @@ if (biodataTableExists($conn) && !empty($nip)) {
 
             <div class="auth-group">
                 <label>Tempat Lahir</label>
-                <input type="text" name="tempat_lahir" maxlength="100" placeholder="Contoh: Manado" required>
+                <input
+                    type="text"
+                    name="tempat_lahir"
+                    maxlength="100"
+                    placeholder="Contoh: Manado"
+                    value="<?= htmlspecialchars($biodata['tempat_lahir'] ?? '') ?>"
+                    <?= $biodataAda ? 'readonly' : 'required' ?>
+                >
             </div>
 
             <div class="auth-group">
                 <label>Tanggal Lahir</label>
-                <input type="date" name="tanggal_lahir" max="<?= date('Y-m-d') ?>" required>
+                <input
+                    type="date"
+                    name="tanggal_lahir"
+                    max="<?= date('Y-m-d') ?>"
+                    value="<?= htmlspecialchars($biodata['tanggal_lahir'] ?? '') ?>"
+                    <?= $biodataAda ? 'readonly' : 'required' ?>
+                >
                 <p class="biodata-note">Usia dihitung otomatis dari tanggal lahir dan tanggal hari ini.</p>
             </div>
 
             <div class="auth-group">
                 <label>Email</label>
-                <input type="email" name="email" maxlength="120" placeholder="nama@domain.com" required>
+                <input
+                    type="email"
+                    name="email"
+                    maxlength="120"
+                    placeholder="nama@domain.com"
+                    value="<?= htmlspecialchars($biodata['email'] ?? '') ?>"
+                    <?= $biodataAda ? 'readonly' : 'required' ?>
+                >
+            </div>
+
+            <div class="auth-group">
+                <label>Alasan Mengikuti Tes</label>
+                <textarea
+                    name="alasan_tes"
+                    rows="4"
+                    maxlength="1000"
+                    placeholder="Tuliskan alasan Anda mengikuti tes hari ini"
+                    required
+                ></textarea>
             </div>
 
             <div class="action" style="margin-top: 10px;">
-                <button type="submit" class="btn-primary">Simpan Biodata</button>
+                <button type="submit" class="btn-primary"><?= $biodataAda ? 'Simpan Alasan & Lanjut Tes' : 'Simpan Biodata & Lanjut Tes' ?></button>
             </div>
         </form>
     </div>

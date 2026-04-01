@@ -41,11 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if ($user['role'] == 'admin') {
                 header("Location: ../admin/index.php");
             } else {
-                if (!biodataTableExists($conn) || !pesertaSudahIsiBiodata($conn, $user['nip'])) {
-                    header("Location: ../biodata.php");
-                } else {
-                    header("Location: ../dashboard.php");
-                }
+                header("Location: ../biodata.php");
             }
             exit();
 
