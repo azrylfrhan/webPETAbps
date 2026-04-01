@@ -67,6 +67,32 @@ if (biodataTableExists($conn) && !empty($nip)) {
             font-size: 0.86em;
             text-align: center;
         }
+        .auth-group textarea {
+            width: 100%;
+            min-height: 110px;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            resize: vertical;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.45;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            box-sizing: border-box;
+        }
+        .auth-group textarea::placeholder {
+            color: #94a3b8;
+        }
+        .auth-group textarea:focus {
+            outline: none;
+            border-color: #0b5ed7;
+            box-shadow: 0 0 0 3px rgba(11, 94, 215, 0.12);
+        }
+        .auth-group textarea[readonly] {
+            background: #f8fafc;
+            color: #475569;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
