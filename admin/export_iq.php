@@ -20,7 +20,7 @@ if ($cek_biodata && mysqli_num_rows($cek_biodata) > 0) {
 $sql = "
     SELECT u.nip, u.nama,
            " . ($has_biodata ? "TIMESTAMPDIFF(YEAR, b.tanggal_lahir, CURDATE())" : "NULL") . " AS usia,
-           u.jabatan, u.satuan_kerja, r.skor AS total_score, r.tanggal
+        u.jabatan, u.satuan_kerja, r.tanggal
     FROM users u
     JOIN iq_results r ON u.nip = r.user_id
     " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
@@ -53,7 +53,9 @@ foreach ($users as $u) {
     $stmt_r->bind_param("s", $u['nip']);
     $stmt_r->execute();
     $r = $stmt_r->get_result()->fetch_assoc();
-    $data_rows[] = array_merge($u, $r ?? []);
+    $sub_scores = $r ?? [];
+    $total_score = array_sum(array_map('intval', $sub_scores));
+    $data_rows[] = array_merge($u, $sub_scores, ['total_score' => $total_score]);
 }
 
 // Generate Excel file (.xls format)

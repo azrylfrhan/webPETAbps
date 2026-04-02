@@ -7,7 +7,7 @@ $nip_filter = trim($_GET['nip'] ?? '');
 // Ambil peserta yang dipilih atau semua peserta yang sudah selesai tes IQ
 if ($nip_filter !== '') {
     $query_users = "
-        SELECT u.nama, u.nip, u.satuan_kerja, r.skor AS total_score, r.tanggal
+        SELECT u.nama, u.nip, u.satuan_kerja, r.tanggal
         FROM users u
         JOIN iq_results r ON u.nip = r.user_id
         WHERE u.role = 'peserta' AND u.nip = ?
@@ -19,7 +19,7 @@ if ($nip_filter !== '') {
     $users = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 } else {
     $query_users = "
-        SELECT u.nama, u.nip, u.satuan_kerja, r.skor AS total_score, r.tanggal
+        SELECT u.nama, u.nip, u.satuan_kerja, r.tanggal
         FROM users u
         JOIN iq_results r ON u.nip = r.user_id
         WHERE u.role = 'peserta'
