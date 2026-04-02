@@ -137,6 +137,13 @@ if ($hasIqSchema) {
 
     <!-- Tabs -->
     <div class="flex items-center gap-1 border-b-2 border-slate-200 mb-6">
+        <button class="tab-btn px-5 py-2.5 text-sm font-semibold text-slate-400 hover:text-slate-600 rounded-t-lg"
+                onclick="openTab(event, 'iq')">
+            🧠 Tes IQ
+            <span class="ml-2 text-xs font-bold bg-amber-50 text-amber-500 px-2 py-0.5 rounded-full">
+                <?= count($iqQuestions) ?>
+            </span>
+        </button>
         <button class="tab-btn active px-5 py-2.5 text-sm font-semibold text-blue-600 rounded-t-lg"
                 onclick="openTab(event, 'msdt')">
             📝 Bagian 1 (MSDT)
@@ -151,13 +158,7 @@ if ($hasIqSchema) {
                 <?= count($soals['KEPRIBADIAN2']) ?>
             </span>
         </button>
-        <button class="tab-btn px-5 py-2.5 text-sm font-semibold text-slate-400 hover:text-slate-600 rounded-t-lg"
-                onclick="openTab(event, 'iq')">
-            🧠 Tes IQ
-            <span class="ml-2 text-xs font-bold bg-amber-50 text-amber-500 px-2 py-0.5 rounded-full">
-                <?= count($iqQuestions) ?>
-            </span>
-        </button>
+        
     </div>
 
     <!-- Tab: MSDT -->
