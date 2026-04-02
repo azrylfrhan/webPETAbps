@@ -2,12 +2,26 @@
 require_once '../backend/config.php';
 include '../backend/auth_check.php';
 
-$query = "SELECT u.nama, u.satuan_kerja, h.* 
-          FROM hasil_papi h 
-          JOIN users u ON h.nip = u.nip
-          WHERE u.role = 'peserta'
-          ORDER BY u.nama ASC";
-$result = mysqli_query($conn, $query);
+$nip_filter = trim($_GET['nip'] ?? '');
+
+if ($nip_filter !== '') {
+    $stmt = $conn->prepare("SELECT u.nama, u.satuan_kerja, h.* 
+              FROM hasil_papi h 
+              JOIN users u ON h.nip = u.nip
+              WHERE u.role = 'peserta' AND u.nip = ?
+              LIMIT 1");
+    $stmt->bind_param('s', $nip_filter);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} else {
+    $query = "SELECT u.nama, u.satuan_kerja, h.* 
+              FROM hasil_papi h 
+              JOIN users u ON h.nip = u.nip
+              WHERE u.role = 'peserta'
+              ORDER BY u.nama ASC";
+    $result = mysqli_query($conn, $query);
+}
+
 $rows   = [];
 while ($r = mysqli_fetch_assoc($result)) $rows[] = $r;
 

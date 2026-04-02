@@ -2,17 +2,33 @@
 include '../backend/auth_check.php';
 require_once '../backend/config.php';
 
-// Ambil semua peserta yang sudah selesai tes IQ
-$query_users = "
-    SELECT u.nama, u.nip, u.satuan_kerja, r.skor AS total_score, r.tanggal
-    FROM users u
-    JOIN iq_results r ON u.nip = r.user_id
-    WHERE u.role = 'peserta'
-    ORDER BY u.nama ASC
-";
-$stmt = $conn->prepare($query_users);
-$stmt->execute();
-$users = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$nip_filter = trim($_GET['nip'] ?? '');
+
+// Ambil peserta yang dipilih atau semua peserta yang sudah selesai tes IQ
+if ($nip_filter !== '') {
+    $query_users = "
+        SELECT u.nama, u.nip, u.satuan_kerja, r.skor AS total_score, r.tanggal
+        FROM users u
+        JOIN iq_results r ON u.nip = r.user_id
+        WHERE u.role = 'peserta' AND u.nip = ?
+        LIMIT 1
+    ";
+    $stmt = $conn->prepare($query_users);
+    $stmt->bind_param('s', $nip_filter);
+    $stmt->execute();
+    $users = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+} else {
+    $query_users = "
+        SELECT u.nama, u.nip, u.satuan_kerja, r.skor AS total_score, r.tanggal
+        FROM users u
+        JOIN iq_results r ON u.nip = r.user_id
+        WHERE u.role = 'peserta'
+        ORDER BY u.nama ASC
+    ";
+    $stmt = $conn->prepare($query_users);
+    $stmt->execute();
+    $users = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
 
 $labels_info = [
     'SE' => 'Melengkapi Kalimat',

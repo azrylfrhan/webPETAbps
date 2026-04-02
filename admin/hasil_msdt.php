@@ -1,16 +1,33 @@
 <?php include '../backend/auth_check.php'; ?>
 <?php require_once '../backend/config.php';
 
-$query = "SELECT u.nama, u.satuan_kerja, u.jabatan,
-                 h.nip, h.to_score, h.ro_score, h.e_score, h.o_score,
-                 h.Ds, h.Mi, h.Au, h.Co, h.Bu, h.Dv, h.Ba, h.E_dim,
-                 h.dominant_model, h.tanggal_tes
-          FROM hasil_msdt h
-          JOIN users u ON h.nip = u.nip
-          WHERE u.role = 'peserta'
-          ORDER BY u.nama ASC";
+$nip_filter = trim($_GET['nip'] ?? '');
 
-$result = mysqli_query($conn, $query);
+if ($nip_filter !== '') {
+    $stmt = $conn->prepare("SELECT u.nama, u.satuan_kerja, u.jabatan,
+                                 h.nip, h.to_score, h.ro_score, h.e_score, h.o_score,
+                                 h.Ds, h.Mi, h.Au, h.Co, h.Bu, h.Dv, h.Ba, h.E_dim,
+                                 h.dominant_model, h.tanggal_tes
+                          FROM hasil_msdt h
+                          JOIN users u ON h.nip = u.nip
+                          WHERE u.role = 'peserta' AND u.nip = ?
+                          LIMIT 1");
+    $stmt->bind_param('s', $nip_filter);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} else {
+    $query = "SELECT u.nama, u.satuan_kerja, u.jabatan,
+                     h.nip, h.to_score, h.ro_score, h.e_score, h.o_score,
+                     h.Ds, h.Mi, h.Au, h.Co, h.Bu, h.Dv, h.Ba, h.E_dim,
+                     h.dominant_model, h.tanggal_tes
+              FROM hasil_msdt h
+              JOIN users u ON h.nip = u.nip
+              WHERE u.role = 'peserta'
+              ORDER BY u.nama ASC";
+
+    $result = mysqli_query($conn, $query);
+}
+
 $rows   = [];
 while ($r = mysqli_fetch_assoc($result)) $rows[] = $r;
 
