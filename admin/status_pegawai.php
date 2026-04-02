@@ -2,6 +2,16 @@
 include '../backend/auth_check.php'; 
 require_once '../backend/config.php';
 
+$akses_filter = $_GET['akses'] ?? 'all';
+if (!in_array($akses_filter, ['all', 'active', 'inactive'], true)) {
+    $akses_filter = 'all';
+}
+
+function statusPegawaiRedirectSuffix(string $akses_filter): string
+{
+    return $akses_filter !== 'all' ? '&akses=' . urlencode($akses_filter) : '';
+}
+
 // --- IMPORT CSV / XLSX ---
 if (isset($_POST['import_csv'])) {
     $file     = $_FILES['csv_file']['tmp_name'];
@@ -104,7 +114,8 @@ if (isset($_POST['import_csv'])) {
             if (mysqli_query($conn, $sql)) $count++;
         }
 
-        header("Location: status_pegawai.php?import=success&count=$count");
+        $suffix = statusPegawaiRedirectSuffix($_POST['akses_filter'] ?? 'all');
+        header("Location: status_pegawai.php?import=success&count=$count$suffix");
         exit;
     }
 }
@@ -124,11 +135,19 @@ if (isset($_POST['bulk_action']) && !empty($_POST['selected_nip'])) {
         case 'reset_msdt':  mysqli_query($conn, "DELETE FROM hasil_msdt WHERE nip IN ('$nip_list')"); break;
         case 'reset_papi':  mysqli_query($conn, "DELETE FROM hasil_papi WHERE nip IN ('$nip_list')"); break;
     }
-    header("Location: status_pegawai.php?bulk=success");
+    $suffix = statusPegawaiRedirectSuffix($_POST['akses_filter'] ?? 'all');
+    header("Location: status_pegawai.php?bulk=success$suffix");
     exit;
 }
 
 // --- QUERY ---
+$where_akses = '';
+if ($akses_filter === 'active') {
+    $where_akses = ' AND u.is_active = 1';
+} elseif ($akses_filter === 'inactive') {
+    $where_akses = ' AND u.is_active = 0';
+}
+
 $result = mysqli_query($conn, "
     SELECT 
         u.nip, u.nama, u.jabatan, u.satuan_kerja,
@@ -142,6 +161,7 @@ $result = mysqli_query($conn, "
     LEFT JOIN hasil_papi h2 ON u.nip = h2.nip
     LEFT JOIN iq_test_sessions iq ON u.nip = iq.nip
     WHERE u.role = 'peserta'
+    $where_akses
     ORDER BY u.nama ASC
 ");
 
@@ -241,11 +261,36 @@ while ($r = mysqli_fetch_assoc($result)) {
                 </a>
             </div>
             <form method="POST" enctype="multipart/form-data" class="flex items-center gap-3">
+                <input type="hidden" name="akses_filter" value="<?= htmlspecialchars($akses_filter) ?>">
                 <input type="file" name="csv_file" accept=".csv,.xlsx,.xls" required
                     class="text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 file:font-semibold hover:file:bg-slate-200 cursor-pointer">
                 <button type="submit" name="import_csv"
                     class="bg-navy text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:opacity-90 transition">Unggah</button>
             </form>
+        </div>
+    </div>
+
+    <!-- FILTER STATUS AKSES -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 mb-5">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+                <p class="text-sm font-bold text-navy">Filter Status Akses</p>
+                <p class="text-xs text-slate-400 mt-0.5">Tampilkan pegawai berdasarkan status akun.</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <a href="status_pegawai.php"
+                   class="px-3 py-1.5 rounded-lg text-xs font-semibold border <?= $akses_filter === 'all' ? 'bg-navy text-white border-navy' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' ?>">
+                    Semua
+                </a>
+                <a href="status_pegawai.php?akses=active"
+                   class="px-3 py-1.5 rounded-lg text-xs font-semibold border <?= $akses_filter === 'active' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' ?>">
+                    Aktif
+                </a>
+                <a href="status_pegawai.php?akses=inactive"
+                   class="px-3 py-1.5 rounded-lg text-xs font-semibold border <?= $akses_filter === 'inactive' ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' ?>">
+                    Non-aktif
+                </a>
+            </div>
         </div>
     </div>
 
@@ -285,6 +330,7 @@ while ($r = mysqli_fetch_assoc($result)) {
         <form id="bf" method="POST">
             <input type="hidden" name="bulk_action" value="1">
             <input type="hidden" name="action_type" id="at">
+            <input type="hidden" name="akses_filter" value="<?= htmlspecialchars($akses_filter) ?>">
 
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
