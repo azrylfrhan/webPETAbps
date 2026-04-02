@@ -37,6 +37,7 @@ if ($hasIqSchema) {
             q.pertanyaan,
             q.gambar,
             q.tipe_soal,
+            q.jawaban_benar,
             s.nama_bagian,
             s.urutan
         FROM iq_questions q
@@ -294,6 +295,13 @@ if ($hasIqSchema) {
                 <div class="p-5">
                     <p class="text-sm font-medium text-slate-700 mb-3 leading-relaxed"><?= htmlspecialchars($q['pertanyaan'] ?? '-') ?></p>
 
+                    <?php if (!empty($q['jawaban_benar'])): ?>
+                        <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <span class="text-xs font-bold text-green-600 uppercase tracking-widest block mb-1">Kunci Jawaban</span>
+                            <p class="text-sm font-bold text-green-700"><?= htmlspecialchars($q['jawaban_benar']) ?></p>
+                        </div>
+                    <?php endif; ?>
+
                     <?php if (!empty($q['gambar'])): ?>
                         <div class="mb-4">
                             <img src="../images/img_soal/<?= htmlspecialchars($q['gambar']) ?>"
@@ -311,8 +319,13 @@ if ($hasIqSchema) {
                     <?php else: ?>
                         <div class="grid grid-cols-2 gap-3">
                             <?php foreach ($opsiIq as $op): ?>
-                            <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
-                                <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Pilihan <?= htmlspecialchars($op['label']) ?></span>
+                            <div class="bg-slate-50 rounded-xl p-3 border border-slate-100 <?= ($op['label'] === strtoupper(trim($q['jawaban_benar'] ?? ''))) ? 'ring-2 ring-green-500 bg-green-50' : '' ?>">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Pilihan <?= htmlspecialchars($op['label']) ?></span>
+                                    <?php if ($op['label'] === strtoupper(trim($q['jawaban_benar'] ?? ''))): ?>
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500 text-white text-xs font-bold">✓</span>
+                                    <?php endif; ?>
+                                </div>
                                 <?php if (!empty($op['opsi_text'])): ?>
                                     <p class="text-sm text-slate-700 mb-2"><?= htmlspecialchars($op['opsi_text']) ?></p>
                                 <?php endif; ?>

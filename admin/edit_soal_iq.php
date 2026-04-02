@@ -41,8 +41,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tipe_soal   = trim($_POST['tipe_soal'] ?? 'pilihan');
     $jawaban_benar = trim($_POST['jawaban_benar'] ?? '');
 
-    if ($section_id <= 0 || $nomor_soal <= 0 || $pertanyaan === '' || !isset($tipeList[$tipe_soal])) {
+    if ($section_id <= 0 || $nomor_soal <= 0 || !isset($tipeList[$tipe_soal])) {
         $error = 'Data utama soal tidak lengkap.';
+    } elseif ($tipe_soal !== 'gambar' && $pertanyaan === '') {
+        $error = 'Pertanyaan harus diisi untuk tipe soal selain gambar.';
     } else {
         $conn->begin_transaction();
         try {
@@ -183,8 +185,9 @@ function h($value) {
                 </div>
 
                 <div class="mb-5">
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Pertanyaan</label>
-                    <textarea name="pertanyaan" rows="5" required><?= h($soal['pertanyaan']) ?></textarea>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Pertanyaan <?php if($soal['tipe_soal'] !== 'gambar'): ?><span class="text-red-500">*</span><?php endif; ?></label>
+                    <textarea name="pertanyaan" rows="5" <?= ($soal['tipe_soal'] !== 'gambar' ? 'required' : '') ?>><?= h($soal['pertanyaan']) ?></textarea>
+                    <?php if($soal['tipe_soal'] === 'gambar'): ?><p class="text-[11px] text-slate-400 mt-2">Opsional untuk soal gambar (hanya gunakan gambar saja).</p><?php endif; ?>
                 </div>
 
                 <div class="grid grid-cols-2 gap-5 mb-6">

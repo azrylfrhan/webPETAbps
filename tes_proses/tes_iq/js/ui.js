@@ -315,7 +315,7 @@ renderQuestion(data, nomor, total){
             html += `<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">`;
             data.options.forEach(opt => {
                 html += `
-                <button data-label="${opt.label}" onclick="saveAnswer(${data.id},'${opt.label}'); nextQuestion();"
+                <button data-label="${opt.label}" onclick="answerAndNext(${data.id},'${opt.label}')"
                     class="option-btn border border-slate-200 rounded-xl p-3 hover:bg-slate-50 hover:border-navy transition text-center">
                     <img src="${IMG_SOAL}${opt.gambar_opsi}"
                          class="mx-auto mb-2 max-h-24 rounded"
@@ -328,7 +328,7 @@ renderQuestion(data, nomor, total){
             html += `<div class="space-y-3">`;
             data.options.forEach(opt => {
                 html += `
-                <button data-label="${opt.label}" onclick="saveAnswer(${data.id},'${opt.label}'); nextQuestion();"
+                <button data-label="${opt.label}" onclick="answerAndNext(${data.id},'${opt.label}')"
                     class="option-btn block w-full text-left border border-slate-200 rounded-xl p-4 hover:bg-slate-50 hover:border-navy transition text-slate-700">
                     <strong class="text-navy">${opt.label}.</strong> ${opt.opsi_text ?? ""}
                 </button>`;
@@ -377,15 +377,17 @@ renderQuestion(data, nomor, total){
         document.getElementById("btn-next-isian").addEventListener("click", () => {
             const val = inputEl.value.trim();
             if (!val) return;
-            saveAnswer(data.id, val);
-            nextQuestion();
+            saveAnswer(data.id, val)
+                .catch(err => console.error("Error saving answer:", err))
+                .finally(() => nextQuestion());
         });
         inputEl.addEventListener("keydown", function(e) {
             if (e.key === "Enter") {
                 const val = this.value.trim();
                 if (!val) return;
-                saveAnswer(data.id, val);
-                nextQuestion();
+                saveAnswer(data.id, val)
+                    .catch(err => console.error("Error saving answer:", err))
+                    .finally(() => nextQuestion());
             }
         });
     }

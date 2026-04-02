@@ -191,11 +191,20 @@ function loadQuestion() {
 ========================================================= */
 
 function saveAnswer(questionId, label) {
-    fetch(`${IQ_API_BASE}/save_answer.php`, {
+    return fetch(`${IQ_API_BASE}/save_answer.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question_id: questionId, answer: label })
     });
+}
+
+async function answerAndNext(questionId, label) {
+    try {
+        await saveAnswer(questionId, label);
+    } catch (e) {
+        console.error("Error saving answer:", e);
+    }
+    nextQuestion();
 }
 
 /* =========================================================
