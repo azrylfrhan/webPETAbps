@@ -283,6 +283,12 @@ if ($hasIqSchema) {
                             <?= htmlspecialchars($q['nama_bagian'] ?: 'Bagian -') ?>
                         </span>
                     </div>
+                    <div class="flex items-center gap-2">
+                        <a href="edit_soal_iq.php?id=<?= $q['id'] ?>"
+                           class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 hover:bg-blue-500 text-blue-600 hover:text-white transition-all">
+                            ✏️ Edit
+                        </a>
+                    </div>
                 </div>
                 <div class="p-5">
                     <p class="text-sm font-medium text-slate-700 mb-3 leading-relaxed"><?= htmlspecialchars($q['pertanyaan'] ?? '-') ?></p>
