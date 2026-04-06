@@ -1,6 +1,7 @@
 <?php
 require_once 'backend/config.php';
 require_once 'backend/auth_check.php';
+require_once 'backend/test_attempt_functions.php';
 
 $nip  = $_SESSION['nip'];
 $nama = $_SESSION['nama'];
@@ -9,6 +10,24 @@ $cek = mysqli_query($conn, "SELECT nip FROM hasil_msdt WHERE nip='$nip'");
 if (mysqli_num_rows($cek) > 0) {
     header("Location: dashboard.php?status=tes_selesai");
     exit;
+}
+
+// Ensure running attempt exists for MSDT
+$attempt_msdt_id = null;
+$stmtAttempt = $conn->prepare("SELECT id FROM test_attempts WHERE nip = ? AND test_type = 'msdt' AND status = 'running' ORDER BY tanggal_mulai DESC LIMIT 1");
+$stmtAttempt->bind_param('s', $nip);
+$stmtAttempt->execute();
+$attemptRow = $stmtAttempt->get_result()->fetch_assoc();
+$stmtAttempt->close();
+
+if ($attemptRow) {
+    $attempt_msdt_id = (int)$attemptRow['id'];
+} else {
+    $attempt_msdt_id = createTestAttemptGeneric($conn, 'msdt', $nip, 'Mulai Tes MSDT oleh peserta');
+}
+
+if ($attempt_msdt_id) {
+    $_SESSION['current_attempt_id_msdt'] = $attempt_msdt_id;
 }
 
 $query  = "SELECT * FROM soal WHERE kode_tes = 'KEPRIBADIAN' ORDER BY nomor_soal ASC";

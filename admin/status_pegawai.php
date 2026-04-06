@@ -1,15 +1,25 @@
 <?php 
 include '../backend/auth_check.php'; 
 require_once '../backend/config.php';
+require_once '../backend/test_attempt_functions.php';
 
 $akses_filter = $_GET['akses'] ?? 'all';
 if (!in_array($akses_filter, ['all', 'active', 'inactive'], true)) {
     $akses_filter = 'all';
 }
 
+$search_query = trim($_GET['q'] ?? '');
+$search_query = preg_replace('/\s+/', ' ', $search_query);
+
 function statusPegawaiRedirectSuffix(string $akses_filter): string
 {
     return $akses_filter !== 'all' ? '&akses=' . urlencode($akses_filter) : '';
+}
+
+$per_page = 10;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) {
+    $page = 1;
 }
 
 // --- IMPORT CSV / XLSX ---
@@ -129,11 +139,29 @@ if (isset($_POST['bulk_action']) && !empty($_POST['selected_nip'])) {
         case 'aktifkan':    mysqli_query($conn, "UPDATE users SET is_active=1 WHERE nip IN ('$nip_list')"); break;
         case 'nonaktifkan': mysqli_query($conn, "UPDATE users SET is_active=0 WHERE nip IN ('$nip_list')"); break;
         case 'reset_iq':
-            mysqli_query($conn, "DELETE FROM iq_test_sessions WHERE nip IN ('$nip_list')");
-            mysqli_query($conn, "DELETE FROM iq_user_answers WHERE user_nip IN ('$nip_list')");
+            // Use new history-aware reset function
+            $alasan = $_POST['alasan_tes'] ?? 'Reset tes oleh admin';
+            foreach ($nips as $nip) {
+                $nip = mysqli_real_escape_string($conn, trim($nip));
+                resetTestWithHistoryGeneric($conn, 'iq', $nip, $alasan);
+            }
             break;
-        case 'reset_msdt':  mysqli_query($conn, "DELETE FROM hasil_msdt WHERE nip IN ('$nip_list')"); break;
-        case 'reset_papi':  mysqli_query($conn, "DELETE FROM hasil_papi WHERE nip IN ('$nip_list')"); break;
+        case 'reset_papi':
+            // Use new history-aware reset function for PAPI
+            $alasan = $_POST['alasan_tes'] ?? 'Reset tes oleh admin';
+            foreach ($nips as $nip) {
+                $nip = mysqli_real_escape_string($conn, trim($nip));
+                resetTestWithHistoryGeneric($conn, 'papi', $nip, $alasan);
+            }
+            break;
+        case 'reset_msdt':
+            // Use new history-aware reset function for MSDT
+            $alasan = $_POST['alasan_tes'] ?? 'Reset tes oleh admin';
+            foreach ($nips as $nip) {
+                $nip = mysqli_real_escape_string($conn, trim($nip));
+                resetTestWithHistoryGeneric($conn, 'msdt', $nip, $alasan);
+            }
+            break;
     }
     $suffix = statusPegawaiRedirectSuffix($_POST['akses_filter'] ?? 'all');
     header("Location: status_pegawai.php?bulk=success$suffix");
@@ -148,6 +176,57 @@ if ($akses_filter === 'active') {
     $where_akses = ' AND u.is_active = 0';
 }
 
+$where_search = '';
+if ($search_query !== '') {
+    $q_esc = mysqli_real_escape_string($conn, $search_query);
+    $where_search = " AND (\n"
+        . "u.nip LIKE '%$q_esc%' OR "
+        . "u.nama LIKE '%$q_esc%' OR "
+        . "COALESCE(u.jabatan, '') LIKE '%$q_esc%' OR "
+        . "COALESCE(u.satuan_kerja, '') LIKE '%$q_esc%' OR "
+        . "COALESCE(u.pangkat_golongan, '') LIKE '%$q_esc%'\n"
+        . ")";
+}
+
+// Hitung total data untuk pagination
+$countResult = mysqli_query($conn, "
+    SELECT COUNT(*) AS total_data
+    FROM users u
+    WHERE u.role = 'peserta'
+    $where_akses
+    $where_search
+");
+$countRow = mysqli_fetch_assoc($countResult);
+$total = (int)($countRow['total_data'] ?? 0);
+
+$total_pages = max(1, (int)ceil($total / $per_page));
+if ($page > $total_pages) {
+    $page = $total_pages;
+}
+$offset = ($page - 1) * $per_page;
+
+// Hitung summary untuk seluruh data terfilter (bukan hanya halaman aktif)
+$summaryResult = mysqli_query($conn, "
+    SELECT
+        SUM(CASE WHEN u.is_active = 1 THEN 1 ELSE 0 END) AS aktif,
+        SUM(CASE WHEN iq.status = 'finished' THEN 1 ELSE 0 END) AS iq_selesai,
+        SUM(CASE WHEN h1.nip IS NOT NULL THEN 1 ELSE 0 END) AS msdt_selesai,
+        SUM(CASE WHEN h2.nip IS NOT NULL THEN 1 ELSE 0 END) AS papi_selesai
+    FROM users u
+    LEFT JOIN hasil_msdt h1 ON u.nip = h1.nip
+    LEFT JOIN hasil_papi h2 ON u.nip = h2.nip
+    LEFT JOIN iq_test_sessions iq ON u.nip = iq.nip
+    WHERE u.role = 'peserta'
+    $where_akses
+    $where_search
+");
+$summary = mysqli_fetch_assoc($summaryResult) ?: [];
+$aktif = (int)($summary['aktif'] ?? 0);
+$iq_selesai = (int)($summary['iq_selesai'] ?? 0);
+$msdt_selesai = (int)($summary['msdt_selesai'] ?? 0);
+$papi_selesai = (int)($summary['papi_selesai'] ?? 0);
+
+// Ambil data per halaman
 $result = mysqli_query($conn, "
     SELECT 
         u.nip, u.nama, u.jabatan, u.satuan_kerja,
@@ -162,20 +241,19 @@ $result = mysqli_query($conn, "
     LEFT JOIN iq_test_sessions iq ON u.nip = iq.nip
     WHERE u.role = 'peserta'
     $where_akses
+    $where_search
     ORDER BY u.nama ASC
+    LIMIT $per_page OFFSET $offset
 ");
 
-// Hitung summary
-$total = $aktif = $iq_selesai = $msdt_selesai = $papi_selesai = 0;
 $rows  = [];
 while ($r = mysqli_fetch_assoc($result)) {
     $rows[] = $r;
-    $total++;
-    if ($r['is_active'])           $aktif++;
-    if ($r['status_iq']==='finished') $iq_selesai++;
-    if ($r['sudah_msdt'])          $msdt_selesai++;
-    if ($r['sudah_papi'])          $papi_selesai++;
 }
+
+$rows_count = count($rows);
+$page_start_row = $total > 0 ? ($offset + 1) : 0;
+$page_end_row = $total > 0 ? ($offset + $rows_count) : 0;
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -278,15 +356,15 @@ while ($r = mysqli_fetch_assoc($result)) {
                 <p class="text-xs text-slate-400 mt-0.5">Tampilkan pegawai berdasarkan status akun.</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-                <a href="status_pegawai.php"
+                <a href="status_pegawai.php?<?= http_build_query(array_filter(['page' => 1, 'q' => $search_query])) ?>"
                    class="px-3 py-1.5 rounded-lg text-xs font-semibold border <?= $akses_filter === 'all' ? 'bg-navy text-white border-navy' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' ?>">
                     Semua
                 </a>
-                <a href="status_pegawai.php?akses=active"
+                <a href="status_pegawai.php?<?= http_build_query(array_filter(['akses' => 'active', 'page' => 1, 'q' => $search_query])) ?>"
                    class="px-3 py-1.5 rounded-lg text-xs font-semibold border <?= $akses_filter === 'active' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' ?>">
                     Aktif
                 </a>
-                <a href="status_pegawai.php?akses=inactive"
+                <a href="status_pegawai.php?<?= http_build_query(array_filter(['akses' => 'inactive', 'page' => 1, 'q' => $search_query])) ?>"
                    class="px-3 py-1.5 rounded-lg text-xs font-semibold border <?= $akses_filter === 'inactive' ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' ?>">
                     Non-aktif
                 </a>
@@ -314,15 +392,21 @@ while ($r = mysqli_fetch_assoc($result)) {
                     <button type="button" onclick="clearAll()" class="text-slate-400 hover:text-slate-600 text-sm ml-1">✕</button>
                 </div>
 
-                <!-- Search -->
-                <div class="relative">
+                <!-- Search (server-side) -->
+                <form method="GET" class="relative flex items-center gap-2">
+                    <?php if ($akses_filter !== 'all'): ?>
+                        <input type="hidden" name="akses" value="<?= htmlspecialchars($akses_filter) ?>">
+                    <?php endif; ?>
                     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
-                    <input id="q" type="text" placeholder="Cari pegawai"
-                        oninput="doSearch()"
+                    <input id="q" name="q" type="text" placeholder="Cari pegawai"
+                        value="<?= htmlspecialchars($search_query) ?>"
                         class="pl-8 pr-7 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white w-72 placeholder-slate-400 transition-all">
-                    <button type="button" onclick="clearSearch()" id="clrQ"
-                        class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">✕</button>
-                </div>
+                    <button type="submit" class="px-3 py-2 text-xs rounded-lg bg-navy text-white font-semibold hover:opacity-90">Cari</button>
+                    <?php if ($search_query !== ''): ?>
+                        <button type="button" onclick="clearSearch()" id="clrQ"
+                            class="absolute right-[86px] top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">✕</button>
+                    <?php endif; ?>
+                </form>
             </div>
         </div>
 
@@ -352,6 +436,7 @@ while ($r = mysqli_fetch_assoc($result)) {
                     </thead>
                     <tbody>
                     <?php foreach ($rows as $i => $p): 
+                        $row_number = $offset + $i + 1;
                         $search_data = strtolower(implode(' ', [
                             $p['nip'],
                             $p['nama'],
@@ -370,7 +455,7 @@ while ($r = mysqli_fetch_assoc($result)) {
                                 <input type="checkbox" name="selected_nip[]" value="<?= $p['nip'] ?>"
                                     class="cb rounded cursor-pointer accent-navy">
                             </td>
-                            <td class="px-3 py-3 text-slate-400 text-xs"><?= $i+1 ?></td>
+                            <td class="px-3 py-3 text-slate-400 text-xs"><?= $row_number ?></td>
 
                             <!-- Nama -->
                             <td class="px-3 py-3">
@@ -432,7 +517,7 @@ while ($r = mysqli_fetch_assoc($result)) {
                             </td>
                         </tr>
                     <?php endforeach; ?>
-                        <tr id="er" class="hidden">
+                        <tr id="er" class="<?= !empty($rows) ? 'hidden' : '' ?>">
                             <td colspan="10" class="text-center py-16 text-slate-400">
                                 <p class="text-3xl mb-2">🔍</p>
                                 <p class="text-sm">Tidak ada pegawai yang cocok.</p>
@@ -444,12 +529,53 @@ while ($r = mysqli_fetch_assoc($result)) {
         </form>
 
         <!-- Footer info -->
-        <div class="px-6 py-3 border-t border-slate-100 flex items-center justify-between">
-            <p class="text-xs text-slate-400" id="info-row">Menampilkan <?= $total ?> pegawai</p>
-            <div class="flex items-center gap-4 text-xs text-slate-400">
-                <span class="flex items-center gap-1"><span class="badge badge-green">✓</span> Selesai</span>
-                <span class="flex items-center gap-1"><span class="badge badge-blue">⟳</span> Sedang</span>
-                <span class="flex items-center gap-1"><span class="badge badge-red">✗</span> Belum</span>
+        <div class="px-6 py-3 border-t border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+            <p class="text-xs text-slate-400" id="info-row">
+                Menampilkan <?= $page_start_row ?>-<?= $page_end_row ?> dari <?= $total ?> pegawai (Halaman <?= $page ?> / <?= $total_pages ?>)
+            </p>
+            <div class="flex items-center gap-3 flex-wrap">
+                <div class="flex items-center gap-4 text-xs text-slate-400">
+                    <span class="flex items-center gap-1"><span class="badge badge-green">✓</span> Selesai</span>
+                    <span class="flex items-center gap-1"><span class="badge badge-blue">⟳</span> Sedang</span>
+                    <span class="flex items-center gap-1"><span class="badge badge-red">✗</span> Belum</span>
+                </div>
+
+                <?php if ($total_pages > 1): ?>
+                <div class="flex items-center gap-1">
+                    <?php
+                        $prev_page = max(1, $page - 1);
+                        $next_page = min($total_pages, $page + 1);
+                        $base_qs = [];
+                        if ($akses_filter !== 'all') {
+                            $base_qs['akses'] = $akses_filter;
+                        }
+                        if ($search_query !== '') {
+                            $base_qs['q'] = $search_query;
+                        }
+                    ?>
+                    <a href="status_pegawai.php?<?= http_build_query(array_merge($base_qs, ['page' => $prev_page])) ?>"
+                       class="px-2.5 py-1.5 rounded-md border text-xs font-semibold <?= $page <= 1 ? 'pointer-events-none opacity-40 bg-slate-50 text-slate-400 border-slate-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' ?>">
+                        Prev
+                    </a>
+
+                    <?php
+                        $window = 2;
+                        $start_page = max(1, $page - $window);
+                        $end_page = min($total_pages, $page + $window);
+                        for ($p = $start_page; $p <= $end_page; $p++):
+                    ?>
+                        <a href="status_pegawai.php?<?= http_build_query(array_merge($base_qs, ['page' => $p])) ?>"
+                           class="px-2.5 py-1.5 rounded-md border text-xs font-bold <?= $p === $page ? 'bg-navy text-white border-navy' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' ?>">
+                            <?= $p ?>
+                        </a>
+                    <?php endfor; ?>
+
+                    <a href="status_pegawai.php?<?= http_build_query(array_merge($base_qs, ['page' => $next_page])) ?>"
+                       class="px-2.5 py-1.5 rounded-md border text-xs font-semibold <?= $page >= $total_pages ? 'pointer-events-none opacity-40 bg-slate-50 text-slate-400 border-slate-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50' ?>">
+                        Next
+                    </a>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -504,35 +630,66 @@ function clearAll() {
 
 function doBulk(action) {
     const n = document.querySelectorAll('.cb:checked').length;
-    const lbl = {aktifkan:'mengaktifkan',nonaktifkan:'menonaktifkan',reset_iq:'mereset Tes IQ',reset_msdt:'mereset Tes Kepribadian Bagian 1',reset_papi:'mereset Tes Kepribadian Bagian 2'};
+    const lbl = {aktifkan:'mengaktifkan',nonaktifkan:'menonaktifkan',reset_iq:'mereset Tes IQ',reset_msdt:'mereset Tes Kepribadian Bagian 2',reset_papi:'mereset Tes Kepribadian Bagian 1'};
+    
+    // For all test resets, ask for reason
+    if (['reset_iq', 'reset_papi', 'reset_msdt'].includes(action)) {
+        if (!confirm(`Yakin ${lbl[action]} ${n} pegawai terpilih?\nTindakan ini tidak bisa dibatalkan.`)) return;
+        openReasonModal(action, n, lbl[action]);
+        return;
+    }
+    
     if (!confirm(`Yakin ${lbl[action]} ${n} pegawai terpilih?\nTindakan ini tidak bisa dibatalkan.`)) return;
     document.getElementById('at').value = action;
     document.getElementById('bf').submit();
 }
 
-// SEARCH
-function doSearch() {
-    const kw  = document.getElementById('q').value.toLowerCase().trim();
-    const rows = document.querySelectorAll('.row');
-    document.getElementById('clrQ').classList.toggle('hidden', !kw);
-    let vis = 0;
-    rows.forEach(r => {
-        const m = (r.dataset.s||'').includes(kw);
-        r.classList.toggle('hidden', !m);
-        if (m) vis++;
-    });
-    document.getElementById('er').classList.toggle('hidden', vis > 0 || !kw);
-    document.getElementById('info-row').textContent = kw
-        ? `Menampilkan ${vis} dari <?= $total ?> pegawai`
-        : `Menampilkan <?= $total ?> pegawai`;
-
-    syncSelectAllState();
+function openReasonModal(action, count, actionLabel) {
+    document.getElementById('reasonModal').classList.remove('hidden');
+    document.getElementById('modal-title').innerText = `Masukkan Alasan ${actionLabel}`;
+    document.getElementById('reason-action').value = action;
+    document.getElementById('reason-count').innerText = count;
+    document.getElementById('reason-test-type').innerText = actionLabel.toLowerCase();
+    document.getElementById('alasan-input').value = '';
+    document.getElementById('alasan-input').focus();
 }
 
+function closeReasonModal() {
+    document.getElementById('reasonModal').classList.add('hidden');
+}
+
+function submitWithReason() {
+    const reason = document.getElementById('alasan-input').value.trim();
+    const action = document.getElementById('reason-action').value;
+    
+    if (!reason) {
+        alert('Silakan masukkan alasan tes terlebih dahulu');
+        return;
+    }
+    
+    // Add reason to form as hidden field
+    document.getElementById('bf').insertAdjacentHTML('beforeend', 
+        `<input type="hidden" name="alasan_tes" value="${escapeHtml(reason)}">`);
+    
+    document.getElementById('at').value = action;
+    closeReasonModal();
+    document.getElementById('bf').submit();
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+
+// SEARCH (server-side)
 function clearSearch() {
-    document.getElementById('q').value = '';
-    doSearch();
-    document.getElementById('q').focus();
+    const params = new URLSearchParams(window.location.search);
+    params.delete('q');
+    params.set('page', '1');
+    const qs = params.toString();
+    window.location.href = 'status_pegawai.php' + (qs ? ('?' + qs) : '');
 }
 
 document.addEventListener('keydown', e => {
@@ -543,5 +700,43 @@ document.addEventListener('keydown', e => {
 
 syncSelectAllState();
 </script>
+
+<!-- Modal Alasan Reset Tes -->
+<div id="reasonModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+        <div class="bg-navy p-6 text-white">
+            <h3 class="text-lg font-bold" id="modal-title">Masukkan Alasan Reset Tes</h3>
+        </div>
+        
+        <div class="p-6 space-y-4">
+            <p class="text-sm text-slate-700">
+                Anda akan mereset <span id="reason-test-type" class="font-semibold">tes</span> untuk <span id="reason-count" class="font-bold">0</span> pegawai. 
+                Tes sebelumnya akan disimpan dalam riwayat dan percobaan baru akan dibuat.
+            </p>
+            
+            <div>
+                <label class="text-sm font-semibold text-slate-700 block mb-2">Alasan Reset Tes</label>
+                <textarea 
+                    id="alasan-input"
+                    class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-700 resize-none"
+                    rows="4"
+                    placeholder="Contoh: Pegawai mengajukan ulang karena merasa kurang waktu di tes pertama"
+                ></textarea>
+            </div>
+            
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeReasonModal()" 
+                        class="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-all">
+                    Batal
+                </button>
+                <button type="button" onclick="submitWithReason()"
+                        class="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-sm">
+                    Lanjutkan Reset
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<input type="hidden" id="reason-action" name="reason_action" value="">
 </body>
 </html>

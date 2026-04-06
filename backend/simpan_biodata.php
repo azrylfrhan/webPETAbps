@@ -77,13 +77,42 @@ try {
         $stmt->close();
     }
 
-    $sqlAlasan = 'INSERT INTO riwayat_alasan_tes (nip, alasan_tes) VALUES (?, ?)';
-    $stmtAlasan = $conn->prepare($sqlAlasan);
-    $stmtAlasan->bind_param('ss', $nip, $alasanTes);
-    if (!$stmtAlasan->execute()) {
-        throw new Exception('Gagal menyimpan alasan tes.');
+    // Save reason into unified history table if available.
+    // It updates the latest running attempt first; if none exists, create a placeholder IQ attempt.
+    $hasTestAttempts = mysqli_query($conn, "SHOW TABLES LIKE 'test_attempts'");
+    if ($hasTestAttempts && mysqli_num_rows($hasTestAttempts) > 0) {
+        $stmtLatest = $conn->prepare("SELECT id FROM test_attempts WHERE nip = ? AND status = 'running' ORDER BY tanggal_mulai DESC LIMIT 1");
+        if (!$stmtLatest) {
+            throw new Exception('Gagal menyiapkan penyimpanan alasan tes.');
+        }
+        $stmtLatest->bind_param('s', $nip);
+        $stmtLatest->execute();
+        $latest = $stmtLatest->get_result()->fetch_assoc();
+        $stmtLatest->close();
+
+        if ($latest) {
+            $stmtReason = $conn->prepare("UPDATE test_attempts SET alasan_tes = ? WHERE id = ?");
+            $stmtReason->bind_param('si', $alasanTes, $latest['id']);
+            if (!$stmtReason->execute()) {
+                throw new Exception('Gagal menyimpan alasan tes.');
+            }
+            $stmtReason->close();
+        } else {
+            $stmtNext = $conn->prepare("SELECT COALESCE(MAX(attempt_number), 0) + 1 AS next_attempt FROM test_attempts WHERE nip = ? AND test_type = 'iq'");
+            $stmtNext->bind_param('s', $nip);
+            $stmtNext->execute();
+            $next = $stmtNext->get_result()->fetch_assoc();
+            $stmtNext->close();
+
+            $nextAttempt = (int)($next['next_attempt'] ?? 1);
+            $stmtInsert = $conn->prepare("INSERT INTO test_attempts (nip, test_type, attempt_number, alasan_tes, status) VALUES (?, 'iq', ?, ?, 'incomplete')");
+            $stmtInsert->bind_param('sis', $nip, $nextAttempt, $alasanTes);
+            if (!$stmtInsert->execute()) {
+                throw new Exception('Gagal menyimpan alasan tes.');
+            }
+            $stmtInsert->close();
+        }
     }
-    $stmtAlasan->close();
 
     $conn->commit();
     header('Location: ../dashboard.php?biodata=ok');

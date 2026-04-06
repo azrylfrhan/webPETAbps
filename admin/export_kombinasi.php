@@ -25,8 +25,7 @@ SELECT
     u.jabatan,
     u.satuan_kerja,
     TIMESTAMPDIFF(YEAR, b.tanggal_lahir, CURDATE()) AS usia,
-    
-    h3.skor AS iq_total_score,
+
     h3.tanggal AS iq_tanggal,
     
     h1.to_score, h1.ro_score, h1.e_score, h1.o_score,
@@ -59,12 +58,12 @@ header("Cache-Control: max-age=0");
 <table border="1" cellpadding="5" cellspacing="0" style="border-collapse:collapse; font-family:Arial; font-size:10px;">
 
     <tr>
-        <td colspan="40" style="font-size:15px; font-weight:bold; color:#0F1E3C; border:none; padding:8px 5px 2px;">
+        <td colspan="51" style="font-size:15px; font-weight:bold; color:#0F1E3C; border:none; padding:8px 5px 2px;">
             REKAPITULASI HASIL KOMBINASI (TES 1 + TES 2 BAGIAN 1 + TES 2 BAGIAN 2)
         </td>
     </tr>
     <tr>
-        <td colspan="40" style="font-size:10px; color:#64748B; border:none; padding:0 5px 10px;">
+        <td colspan="51" style="font-size:10px; color:#64748B; border:none; padding:0 5px 10px;">
             Tanggal Export: <?= date('d F Y') ?> &nbsp;|&nbsp; Total Peserta: <?= count($rows) ?> 
             <?php if (!empty($tgl_mulai) && !empty($tgl_akhir)): ?>
             &nbsp;|&nbsp; Filter: Dari <?= date('d/m/Y', strtotime($tgl_mulai)) ?> s/d <?= date('d/m/Y', strtotime($tgl_akhir)) ?>
@@ -80,8 +79,16 @@ header("Cache-Control: max-age=0");
         <td style="background-color:#0F1E3C; color:#fff; width:120px;">Jabatan</td>
         <td style="background-color:#0F1E3C; color:#fff; width:120px;">Satuan Kerja</td>
         
-        <!-- TES 1 IQ -->
-        <td style="background-color:#FBBF24; color:#000; width:80px;">Skor Tes 1</td>
+        <!-- TES 1 IQ (tanpa skor total, gunakan per-subtes seperti export Tes 1) -->
+        <td style="background-color:#FBBF24; color:#000; width:45px;">SE</td>
+        <td style="background-color:#FBBF24; color:#000; width:45px;">WA</td>
+        <td style="background-color:#FBBF24; color:#000; width:45px;">AN</td>
+        <td style="background-color:#FBBF24; color:#000; width:45px;">GE</td>
+        <td style="background-color:#FBBF24; color:#000; width:45px;">RA</td>
+        <td style="background-color:#FBBF24; color:#000; width:45px;">ZR</td>
+        <td style="background-color:#FBBF24; color:#000; width:45px;">FA</td>
+        <td style="background-color:#FBBF24; color:#000; width:45px;">WU</td>
+        <td style="background-color:#FBBF24; color:#000; width:45px;">ME</td>
         <td style="background-color:#FBBF24; color:#000; width:100px;">Tgl Tes 1</td>
         
         <!-- TES 2 BAG 1 (MSDT) -->
@@ -126,7 +133,26 @@ header("Cache-Control: max-age=0");
 
     <?php 
     $no = 1;
-    foreach($rows as $r): 
+    foreach($rows as $r):
+        $stmt_iq = $conn->prepare(" 
+            SELECT 
+                SUM(CASE WHEN s.urutan=1 AND LOWER(TRIM(ua.jawaban_user))=LOWER(TRIM(q.jawaban_benar)) THEN 1 ELSE 0 END) AS SE,
+                SUM(CASE WHEN s.urutan=2 AND LOWER(TRIM(ua.jawaban_user))=LOWER(TRIM(q.jawaban_benar)) THEN 1 ELSE 0 END) AS WA,
+                SUM(CASE WHEN s.urutan=3 AND LOWER(TRIM(ua.jawaban_user))=LOWER(TRIM(q.jawaban_benar)) THEN 1 ELSE 0 END) AS AN,
+                SUM(CASE WHEN s.urutan=4 THEN COALESCE((SELECT MAX(nilai) FROM iq_fill_answers fa WHERE fa.question_id=ua.question_id AND FIND_IN_SET(LOWER(TRIM(ua.jawaban_user)),REPLACE(LOWER(fa.jawaban),', ',','))>0),0) ELSE 0 END) AS GE,
+                SUM(CASE WHEN s.urutan=5 AND LOWER(TRIM(ua.jawaban_user))=LOWER(TRIM(q.jawaban_benar)) THEN 1 ELSE 0 END) AS RA,
+                SUM(CASE WHEN s.urutan=6 AND LOWER(TRIM(ua.jawaban_user))=LOWER(TRIM(q.jawaban_benar)) THEN 1 ELSE 0 END) AS ZR,
+                SUM(CASE WHEN s.urutan=7 AND LOWER(TRIM(ua.jawaban_user))=LOWER(TRIM(q.jawaban_benar)) THEN 1 ELSE 0 END) AS FA,
+                SUM(CASE WHEN s.urutan=8 AND LOWER(TRIM(ua.jawaban_user))=LOWER(TRIM(q.jawaban_benar)) THEN 1 ELSE 0 END) AS WU,
+                SUM(CASE WHEN s.urutan=9 AND LOWER(TRIM(ua.jawaban_user))=LOWER(TRIM(q.jawaban_benar)) THEN 1 ELSE 0 END) AS ME
+            FROM iq_user_answers ua
+            JOIN iq_questions q ON ua.question_id=q.id
+            JOIN iq_sections s ON q.section_id=s.id
+            WHERE ua.user_nip=?
+        ");
+        $stmt_iq->bind_param("s", $r['nip']);
+        $stmt_iq->execute();
+        $iq_sub = $stmt_iq->get_result()->fetch_assoc() ?: [];
     ?>
     <tr style="font-size:9px;">
         <td style="text-align:center; border-right:1px solid #ddd;"><?= $no++ ?></td>
@@ -137,7 +163,15 @@ header("Cache-Control: max-age=0");
         <td style="border-right:1px solid #ddd;"><?= htmlspecialchars($r['satuan_kerja']) ?></td>
         
         <!-- TES 1 -->
-        <td style="text-align:center; background-color:#FEF3C7; border-right:1px solid #ddd;"><?= $r['iq_total_score'] ?? '-' ?></td>
+        <td style="text-align:center; background-color:#FEF3C7;"><?= (int)($iq_sub['SE'] ?? 0) ?></td>
+        <td style="text-align:center; background-color:#FEF3C7;"><?= (int)($iq_sub['WA'] ?? 0) ?></td>
+        <td style="text-align:center; background-color:#FEF3C7;"><?= (int)($iq_sub['AN'] ?? 0) ?></td>
+        <td style="text-align:center; background-color:#FEF3C7;"><?= (int)($iq_sub['GE'] ?? 0) ?></td>
+        <td style="text-align:center; background-color:#FEF3C7;"><?= (int)($iq_sub['RA'] ?? 0) ?></td>
+        <td style="text-align:center; background-color:#FEF3C7;"><?= (int)($iq_sub['ZR'] ?? 0) ?></td>
+        <td style="text-align:center; background-color:#FEF3C7;"><?= (int)($iq_sub['FA'] ?? 0) ?></td>
+        <td style="text-align:center; background-color:#FEF3C7;"><?= (int)($iq_sub['WU'] ?? 0) ?></td>
+        <td style="text-align:center; background-color:#FEF3C7;"><?= (int)($iq_sub['ME'] ?? 0) ?></td>
         <td style="text-align:center; background-color:#FEF3C7; border-right:1px solid #ddd;"><?= $r['iq_tanggal'] ? date('d/m/Y', strtotime($r['iq_tanggal'])) : '-' ?></td>
         
         <!-- TES 2 BAG 1 -->

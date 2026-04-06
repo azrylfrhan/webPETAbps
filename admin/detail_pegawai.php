@@ -1,6 +1,7 @@
 <?php 
 include '../backend/auth_check.php'; 
 require_once '../backend/config.php';
+require_once '../backend/test_attempt_functions.php';
 
 $nip = mysqli_real_escape_string($conn, $_GET['nip']);
 $has_biodata = false;
@@ -25,21 +26,37 @@ $user = mysqli_fetch_assoc($query);
 
 if (!$user) { header("Location: status_pegawai.php"); exit(); }
 
-$riwayatTes = [];
-$has_riwayat_tes = false;
-$cek_riwayat = mysqli_query($conn, "SHOW TABLES LIKE 'riwayat_alasan_tes'");
-if ($cek_riwayat && mysqli_num_rows($cek_riwayat) > 0) {
-    $has_riwayat_tes = true;
-    $stmtRiwayat = $conn->prepare("SELECT created_at, alasan_tes FROM riwayat_alasan_tes WHERE nip = ? ORDER BY created_at DESC");
-    if ($stmtRiwayat) {
-        $stmtRiwayat->bind_param('s', $nip);
-        $stmtRiwayat->execute();
-        $resRiwayat = $stmtRiwayat->get_result();
-        while ($r = $resRiwayat->fetch_assoc()) {
-            $riwayatTes[] = $r;
-        }
-        $stmtRiwayat->close();
+// Get all test attempts from unified table
+$all_attempts = [];
+$has_attempts_table = false;
+
+$cek_unified = mysqli_query($conn, "SHOW TABLES LIKE 'test_attempts'");
+if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
+    $has_attempts_table = true;
+    
+    // Get all types
+    $iq_attempts = getAttemptHistoryGeneric($conn, 'iq', $nip);
+    $papi_attempts = getAttemptHistoryGeneric($conn, 'papi', $nip);
+    $msdt_attempts = getAttemptHistoryGeneric($conn, 'msdt', $nip);
+    
+    // Add test_type identifier and combine
+    foreach ($iq_attempts as $attempt) {
+        $attempt['test_type'] = 'iq';
+        $all_attempts[] = $attempt;
     }
+    foreach ($papi_attempts as $attempt) {
+        $attempt['test_type'] = 'papi';
+        $all_attempts[] = $attempt;
+    }
+    foreach ($msdt_attempts as $attempt) {
+        $attempt['test_type'] = 'msdt';
+        $all_attempts[] = $attempt;
+    }
+    
+    // Sort by date descending
+    usort($all_attempts, function($a, $b) {
+        return strtotime($b['tanggal_mulai']) - strtotime($a['tanggal_mulai']);
+    });
 }
 ?>
 
@@ -57,7 +74,7 @@ if ($cek_riwayat && mysqli_num_rows($cek_riwayat) > 0) {
 <?php include 'includes/sidebar.php'; ?>
 
 <div class="ml-[260px] flex-1 p-8">
-    <div class="max-w-3xl mx-auto">
+    <div class="w-full">
         <a href="status_pegawai.php" class="inline-flex items-center text-sm text-slate-500 hover:text-navy mb-6 transition-colors">
             ← Kembali ke Daftar
         </a>
@@ -151,32 +168,106 @@ if ($cek_riwayat && mysqli_num_rows($cek_riwayat) > 0) {
                     </form>
                 </div>
 
+                <!-- Unified Test Attempts History Section -->
                 <div class="mt-8 bg-white rounded-xl p-6 border border-slate-200">
-                    <h3 class="text-sm font-bold text-slate-700">Riwayat Mengikuti Tes</h3>
-                    <p class="text-xs text-slate-500 mt-1 mb-4">Menampilkan tanggal mengikuti tes dan alasan pada tanggal tersebut.</p>
+                    <h3 class="text-2xl font-bold text-navy">Daftar Hasil Tes Pegawai</h3>
+                    <p class="text-sm text-slate-500 mt-2 mb-5">Setiap percobaan tes tersimpan sebagai baris baru dan tidak menimpa riwayat sebelumnya.</p>
 
-                    <?php if (!$has_riwayat_tes): ?>
+                    <?php if (!$has_attempts_table): ?>
                         <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                            Tabel riwayat alasan tes belum tersedia.
+                            ⚠️ Tabel tes belum diaktifkan. Jalankan migrasi database terlebih dahulu.
                         </div>
-                    <?php elseif (empty($riwayatTes)): ?>
+                    <?php elseif (empty($all_attempts)): ?>
                         <div class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-                            Belum ada riwayat alasan tes untuk pegawai ini.
+                            Belum ada percobaan tes untuk pegawai ini.
                         </div>
                     <?php else: ?>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm">
-                                <thead>
-                                    <tr class="border-b border-slate-200">
-                                        <th class="text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider py-2 pr-3">Tanggal Mengikuti Tes</th>
-                                        <th class="text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider py-2">Alasan Mengikuti Tes</th>
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="min-w-full text-sm">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">No</th>
+                                        <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Tanggal Tes</th>
+                                        <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Alasan Mengikuti</th>
+                                        <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Tes 1</th>
+                                        <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Tes 2 Bag. 1</th>
+                                        <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Tes 2 Bag. 2</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <?php foreach ($riwayatTes as $item): ?>
-                                    <tr class="border-b border-slate-100 align-top">
-                                        <td class="py-3 pr-3 text-slate-600 whitespace-nowrap"><?= date('d/m/Y H:i', strtotime($item['created_at'])) ?></td>
-                                        <td class="py-3 text-slate-700 leading-relaxed"><?= nl2br(htmlspecialchars($item['alasan_tes'])) ?></td>
+                                <tbody class="divide-y divide-slate-100 bg-white">
+                                    <?php foreach ($all_attempts as $idx => $attempt): ?>
+                                    <?php
+                                        $isFinished = ($attempt['status'] === 'finished');
+                                        $scoreIq = ($attempt['skor_total'] ?? null);
+                                        $scoreMsdt = ($attempt['TO_score'] ?? null);
+                                        $scorePapi = null;
+                                        if ($attempt['test_type'] === 'papi') {
+                                            $sum = 0;
+                                            foreach (['G','L','I','T','V','S','R','D','C','E','N','A','P','X','B','O','K','F','W','Z'] as $k) {
+                                                $sum += (int)($attempt[$k] ?? 0);
+                                            }
+                                            $scorePapi = $sum;
+                                        }
+                                    ?>
+                                    <tr class="hover:bg-slate-50/70 transition-colors">
+                                        <td class="px-4 py-4 text-slate-500 font-semibold"><?= $idx + 1 ?></td>
+                                        <td class="px-4 py-4 text-slate-700 font-semibold whitespace-nowrap">
+                                            <?= date('d/m/Y H:i', strtotime($attempt['tanggal_mulai'])) ?>
+                                        </td>
+                                        <td class="px-4 py-4 text-slate-700 leading-relaxed">
+                                            <?= !empty($attempt['alasan_tes']) ? nl2br(htmlspecialchars($attempt['alasan_tes'])) : '<span class="text-slate-400">-</span>' ?>
+                                        </td>
+
+                                        <!-- TES 1 (IQ) -->
+                                        <td class="px-4 py-4 text-center">
+                                            <?php if ($attempt['test_type'] === 'iq'): ?>
+                                                <?php if ($isFinished): ?>
+                                                    <button onclick="showAttemptAnswers(<?= $attempt['attempt_id'] ?>, 'iq', 'Percobaan #<?= $attempt['attempt_number'] ?>')"
+                                                            class="inline-flex items-center gap-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                        📊 Lihat Jawaban & Skor
+                                                    </button>
+                                                    <p class="text-[11px] text-slate-500 mt-1">Skor: <?= $scoreIq !== null ? (int)$scoreIq : '-' ?></p>
+                                                <?php else: ?>
+                                                    <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-bold">Sedang Berjalan</span>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <span class="text-xs bg-slate-100 text-slate-400 px-3 py-1.5 rounded-full font-bold">Belum Ada</span>
+                                            <?php endif; ?>
+                                        </td>
+
+                                        <!-- TES 2 BAG. 1 (MSDT) -->
+                                        <td class="px-4 py-4 text-center">
+                                            <?php if ($attempt['test_type'] === 'msdt'): ?>
+                                                <?php if ($isFinished): ?>
+                                                    <button onclick="showAttemptAnswers(<?= $attempt['attempt_id'] ?>, 'msdt', 'Percobaan #<?= $attempt['attempt_number'] ?>')"
+                                                            class="inline-flex items-center gap-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                        📊 Lihat Jawaban & Skor
+                                                    </button>
+                                                    <p class="text-[11px] text-slate-500 mt-1">TO: <?= $scoreMsdt !== null ? (int)$scoreMsdt : '-' ?></p>
+                                                <?php else: ?>
+                                                    <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-bold">Sedang Berjalan</span>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <span class="text-xs bg-slate-100 text-slate-400 px-3 py-1.5 rounded-full font-bold">Belum Ada</span>
+                                            <?php endif; ?>
+                                        </td>
+
+                                        <!-- TES 2 BAG. 2 (PAPI) -->
+                                        <td class="px-4 py-4 text-center">
+                                            <?php if ($attempt['test_type'] === 'papi'): ?>
+                                                <?php if ($isFinished): ?>
+                                                    <button onclick="showAttemptAnswers(<?= $attempt['attempt_id'] ?>, 'papi', 'Percobaan #<?= $attempt['attempt_number'] ?>')"
+                                                            class="inline-flex items-center gap-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                        📊 Lihat Jawaban & Skor
+                                                    </button>
+                                                    <p class="text-[11px] text-slate-500 mt-1">Total: <?= $scorePapi !== null ? (int)$scorePapi : '-' ?></p>
+                                                <?php else: ?>
+                                                    <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-bold">Sedang Berjalan</span>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <span class="text-xs bg-slate-100 text-slate-400 px-3 py-1.5 rounded-full font-bold">Belum Ada</span>
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -185,6 +276,20 @@ if ($cek_riwayat && mysqli_num_rows($cek_riwayat) > 0) {
                     <?php endif; ?>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Lihat Jawaban -->
+<div id="answersModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="bg-navy p-6 text-white sticky top-0 z-10">
+            <h3 class="text-lg font-bold" id="answersModalTitle">Jawaban Tes</h3>
+            <button onclick="closeAnswersModal()" class="absolute top-6 right-6 text-white hover:text-gray-200 text-2xl">×</button>
+        </div>
+        
+        <div id="answersContent" class="p-6">
+            <!-- Answers will be loaded here -->
         </div>
     </div>
 </div>
@@ -318,6 +423,114 @@ function showNotification(message, type) {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeEditModal();
+        closeAnswersModal();
+    }
+});
+
+// Functions for Answers Modal
+function showAttemptAnswers(attemptId, testType, attemptTitle) {
+    const badge = testType === 'iq' ? '🧠 IQ' : (testType === 'papi' ? '🧩 PAPI' : '🎭 MSDT');
+    document.getElementById('answersModalTitle').innerText = '📋 ' + badge + ' - ' + attemptTitle;
+    document.getElementById('answersContent').innerHTML = '<p class="text-center text-slate-500">Memuat jawaban...</p>';
+    document.getElementById('answersModal').classList.remove('hidden');
+
+    // Fetch answers from server
+    fetch('api/get_attempt_answers.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            attempt_id: attemptId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            let html = '<div class="space-y-4">';
+
+            if (!data.answers || data.answers.length === 0) {
+                html += '<div class="text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-4">Belum ada data jawaban tersimpan untuk attempt ini.</div>';
+            } else if (data.test_type === 'iq') {
+                data.answers.forEach((item) => {
+                    const sectionName = item.section;
+                    const isCorrect = item.user_answer && item.correct_answer &&
+                        item.user_answer.trim().toUpperCase() === item.correct_answer.trim().toUpperCase();
+
+                    html += `
+                        <div class="border border-slate-200 rounded-lg p-3 ${isCorrect ? 'bg-green-50 border-green-300' : 'bg-slate-50'}">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-600 uppercase">${sectionName} - Soal ${item.question_number}</p>
+                                    <p class="text-sm text-slate-700 mt-1">${item.question_text || 'Soal tidak ditemukan'}</p>
+                                </div>
+                                ${isCorrect ? '<span class="text-xs bg-green-500 text-white px-2 py-1 rounded font-bold">✓ Benar</span>' :
+                                  item.user_answer ? '<span class="text-xs bg-red-500 text-white px-2 py-1 rounded font-bold">✗ Salah</span>' :
+                                  '<span class="text-xs bg-gray-400 text-white px-2 py-1 rounded font-bold">- Tidak Dijawab</span>'}
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                    <p class="text-slate-600 font-semibold">Jawaban Anda:</p>
+                                    <p class="text-slate-800 font-mono bg-white px-2 py-1 rounded border border-slate-200 mt-1">${item.user_answer || '(tidak dijawab)'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-600 font-semibold">Jawaban Benar:</p>
+                                    <p class="text-emerald-800 font-mono bg-white px-2 py-1 rounded border border-emerald-300 mt-1">${item.correct_answer}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                data.answers.forEach((item) => {
+                    const answerBadge = item.user_answer
+                        ? `<span class="text-xs bg-blue-500 text-white px-2 py-1 rounded font-bold">${item.user_answer}</span>`
+                        : '<span class="text-xs bg-gray-400 text-white px-2 py-1 rounded font-bold">-</span>';
+
+                    html += `
+                        <div class="border border-slate-200 rounded-lg p-3 bg-slate-50">
+                            <div class="flex justify-between items-start mb-2">
+                                <p class="text-xs font-bold text-slate-600 uppercase">Soal ${item.question_number}</p>
+                                ${answerBadge}
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                                <div class="bg-white border border-slate-200 rounded p-2">
+                                    <p class="text-slate-500 font-semibold mb-1">Pilihan A</p>
+                                    <p class="text-slate-700">${item.option_a || '-'}</p>
+                                </div>
+                                <div class="bg-white border border-slate-200 rounded p-2">
+                                    <p class="text-slate-500 font-semibold mb-1">Pilihan B</p>
+                                    <p class="text-slate-700">${item.option_b || '-'}</p>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-xs text-slate-600">
+                                <span class="font-semibold">Jawaban dipilih:</span> ${item.user_answer || '(tidak dijawab)'}
+                                ${data.test_type === 'papi' ? `<span class="ml-2"><span class="font-semibold">Dimensi:</span> ${item.mapped_dimension || '-'}</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            html += '</div>';
+            document.getElementById('answersContent').innerHTML = html;
+        } else {
+            document.getElementById('answersContent').innerHTML = '<p class="text-red-600 text-sm">Gagal memuat jawaban: ' + (data.message || 'Unknown error') + '</p>';
+        }
+    })
+    .catch(error => {
+        document.getElementById('answersContent').innerHTML = '<p class="text-red-600 text-sm">Terjadi kesalahan: ' + error + '</p>';
+    });
+}
+
+function closeAnswersModal() {
+    document.getElementById('answersModal').classList.add('hidden');
+}
+
+// Close answers modal when clicking outside
+document.getElementById('answersModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAnswersModal();
     }
 });
 </script>

@@ -10,23 +10,10 @@ function biodataTableExists(mysqli $conn): bool
     return $res && mysqli_num_rows($res) > 0;
 }
 
-function alasanTesTableExists(mysqli $conn): bool
-{
-    $res = mysqli_query($conn, "SHOW TABLES LIKE 'riwayat_alasan_tes'");
-    return $res && mysqli_num_rows($res) > 0;
-}
-
 function ensureAlasanTesTable(mysqli $conn): bool
 {
-    $sql = "CREATE TABLE IF NOT EXISTS riwayat_alasan_tes (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        nip VARCHAR(30) NOT NULL,
-        alasan_tes TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_riwayat_alasan_nip (nip)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-
-    return mysqli_query($conn, $sql) === true;
+    // Legacy table was removed. Keep function for backward compatibility.
+    return true;
 }
 
 function pesertaSudahIsiBiodata(mysqli $conn, string $nip): bool

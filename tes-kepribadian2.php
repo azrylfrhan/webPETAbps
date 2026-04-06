@@ -1,6 +1,7 @@
 <?php
 require_once 'backend/auth_check.php';
 require_once 'backend/config.php';
+require_once 'backend/test_attempt_functions.php';
 
 $nip  = $_SESSION['nip'] ?? '-';
 $nama = $_SESSION['nama'] ?? 'User';
@@ -15,6 +16,24 @@ $check_papi = mysqli_query($conn, "SELECT id FROM hasil_papi WHERE nip = '$nip'"
 if (mysqli_num_rows($check_papi) > 0) {
     header("Location: dashboard.php?status=tes_selesai");
     exit;
+}
+
+// Ensure running attempt exists for PAPI
+$attempt_papi_id = null;
+$stmtAttempt = $conn->prepare("SELECT id FROM test_attempts WHERE nip = ? AND test_type = 'papi' AND status = 'running' ORDER BY tanggal_mulai DESC LIMIT 1");
+$stmtAttempt->bind_param('s', $nip);
+$stmtAttempt->execute();
+$attemptRow = $stmtAttempt->get_result()->fetch_assoc();
+$stmtAttempt->close();
+
+if ($attemptRow) {
+    $attempt_papi_id = (int)$attemptRow['id'];
+} else {
+    $attempt_papi_id = createTestAttemptGeneric($conn, 'papi', $nip, 'Mulai Tes PAPI oleh peserta');
+}
+
+if ($attempt_papi_id) {
+    $_SESSION['current_attempt_id_papi'] = $attempt_papi_id;
 }
 
 $query  = "SELECT * FROM soal WHERE kode_tes = 'KEPRIBADIAN2' AND status = 'aktif' ORDER BY nomor_soal ASC";

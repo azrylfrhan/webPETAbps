@@ -9,31 +9,53 @@ $filterTanggal = '';
 if (!empty($tgl_mulai) && !empty($tgl_akhir)) {
     $tgl_mulai_safe = mysqli_real_escape_string($conn, $tgl_mulai);
     $tgl_akhir_safe = mysqli_real_escape_string($conn, $tgl_akhir);
-    $filterTanggal = " AND (
-        DATE(h1.tanggal_tes) BETWEEN '$tgl_mulai_safe' AND '$tgl_akhir_safe'
-        OR DATE(h2.tanggal_tes) BETWEEN '$tgl_mulai_safe' AND '$tgl_akhir_safe'
-        OR DATE(h3.tanggal) BETWEEN '$tgl_mulai_safe' AND '$tgl_akhir_safe'
-    )";
+    $filterTanggal = " AND DATE(ta.tanggal_mulai) BETWEEN '$tgl_mulai_safe' AND '$tgl_akhir_safe'";
 }
 
-// PERBAIKAN: Menambahkan LEFT JOIN untuk tabel iq_results
-// Kita menggunakan u.id = h3.user_id sesuai dengan struktur tabel iq_results yang Anda buat
+$perPage = 10;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) {
+    $page = 1;
+}
+
+$countQuery = "
+SELECT COUNT(*) AS total
+FROM test_attempts ta
+JOIN users u ON u.nip = ta.nip
+WHERE u.role = 'peserta'
+    AND ta.status = 'finished'
+    $filterTanggal";
+
+$countResult = mysqli_query($conn, $countQuery);
+if (!$countResult) {
+    die("Query Error: " . mysqli_error($conn));
+}
+
+$totalRows = (int)(mysqli_fetch_assoc($countResult)['total'] ?? 0);
+$totalPages = max(1, (int)ceil($totalRows / $perPage));
+if ($page > $totalPages) {
+    $page = $totalPages;
+}
+$offset = ($page - 1) * $perPage;
+
+// Gunakan tabel unified test_attempts agar setiap percobaan tes muncul sebagai baris baru.
 $queryPegawai = "
 SELECT 
-    u.nip, 
-    u.nama, 
+    ta.id AS attempt_id,
+    ta.nip,
+    u.nama,
     u.satuan_kerja,
-    h1.tanggal_tes AS tgl_msdt,
-    h2.tanggal_tes AS tgl_papi,
-    h3.tanggal AS tgl_iq
-FROM users u
-LEFT JOIN hasil_msdt h1 ON u.nip = h1.nip
-LEFT JOIN hasil_papi h2 ON u.nip = h2.nip
-LEFT JOIN iq_results h3 ON u.nip = h3.user_id
-WHERE u.role = 'peserta' 
-    AND (h1.nip IS NOT NULL OR h2.nip IS NOT NULL OR h3.user_id IS NOT NULL)
+    ta.test_type,
+    ta.attempt_number,
+    ta.tanggal_mulai AS tgl_tes,
+    ta.alasan_tes
+FROM test_attempts ta
+JOIN users u ON u.nip = ta.nip
+WHERE u.role = 'peserta'
+    AND ta.status = 'finished'
     $filterTanggal
-ORDER BY u.nama ASC";
+ORDER BY ta.tanggal_mulai DESC, ta.id DESC
+LIMIT $perPage OFFSET $offset";
 
 // 2. Eksekusi kueri ke variabel $resultPegawai
 $resultPegawai = mysqli_query($conn, $queryPegawai);
@@ -122,12 +144,13 @@ if (!$resultPegawai) {
                     📥 Export Kombinasi
                 </button>
             </div>
+
         </form>
     </div>
 
     <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
         <div class="flex items-center justify-between mb-5">
-            <h3 class="text-base font-bold text-navy">Daftar Hasil Tes Pegawai</h3>
+            <h3 class="text-base font-bold text-navy">Daftar Hasil Tes Pegawai (Urut Tes Terbaru)</h3>
         </div>
 
         <div class="overflow-x-auto">
@@ -136,7 +159,7 @@ if (!$resultPegawai) {
                     <tr>
                         <th class="text-left text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50 rounded-l-lg w-10">No</th>
                         <th class="text-left text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50">Informasi Pegawai</th>
-                        <th class="text-left text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50">Unit Kerja</th>
+                        <th class="text-left text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50">Detail Percobaan</th>
                         <th class="text-center text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50 rounded-r-lg">Tes 1</th>
                         <th class="text-center text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50">Tes 2 Bag. 1</th>
                         <th class="text-center text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50">Tes 2 Bag. 2</th>
@@ -144,7 +167,7 @@ if (!$resultPegawai) {
                 </thead>
                 <tbody>
                     <?php 
-                    $no = 1;
+                    $no = $offset + 1;
                     while($row = mysqli_fetch_assoc($resultPegawai)): 
                     ?>
                     <tr class="hover:bg-blue-50/40 transition-colors">
@@ -159,14 +182,17 @@ if (!$resultPegawai) {
                         </td>
 
                         <td class="px-4 py-3.5 border-b border-slate-100 text-sm text-slate-500">
-                            <?= htmlspecialchars($row['satuan_kerja']); ?>
+                            <p class="font-semibold text-slate-700 text-xs">Unit: <?= htmlspecialchars($row['satuan_kerja']); ?></p>
+                            <p class="text-xs text-slate-500 mt-1">Tanggal Tes: <?= date('d/m/Y H:i', strtotime($row['tgl_tes'])); ?></p>
+                            <p class="text-xs text-slate-500 mt-1">Percobaan #<?= (int)$row['attempt_number']; ?></p>
+                            <p class="text-xs text-slate-500 mt-1">Alasan: <?= !empty($row['alasan_tes']) ? htmlspecialchars($row['alasan_tes']) : '-'; ?></p>
                         </td>
 
                         <td class="px-4 py-3.5 border-b border-slate-100 text-center">
-                            <?php if($row['tgl_iq']): ?>
-                                <a href="hasil_iq.php?nip=<?= $row['nip']; ?>"
+                            <?php if($row['test_type'] === 'iq'): ?>
+                                <a href="hasil_iq.php?nip=<?= urlencode($row['nip']); ?>"
                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 hover:bg-amber-500 text-amber-700 hover:text-white transition-all">
-                                    📊 Lihat Tes 1
+                                    📊 Lihat Jawaban & Skor
                                 </a>
                             <?php else: ?>
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-400">
@@ -176,10 +202,10 @@ if (!$resultPegawai) {
                         </td>
 
                         <td class="px-4 py-3.5 border-b border-slate-100 text-center">
-                            <?php if($row['tgl_msdt']): ?>
-                                <a href="hasil_msdt.php?nip=<?= $row['nip']; ?>"
+                            <?php if($row['test_type'] === 'msdt'): ?>
+                                <a href="hasil_msdt.php?nip=<?= urlencode($row['nip']); ?>"
                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-100 hover:bg-blue-500 text-blue-700 hover:text-white transition-all">
-                                    📊 Lihat Tes 2 Bag. 1
+                                    📊 Lihat Jawaban & Skor
                                 </a>
                             <?php else: ?>
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-400">
@@ -189,10 +215,10 @@ if (!$resultPegawai) {
                         </td>
 
                         <td class="px-4 py-3.5 border-b border-slate-100 text-center">
-                            <?php if($row['tgl_papi']): ?>
-                                <a href="hasil_papi.php?nip=<?= $row['nip']; ?>"
+                            <?php if($row['test_type'] === 'papi'): ?>
+                                <a href="hasil_papi.php?nip=<?= urlencode($row['nip']); ?>"
                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-100 hover:bg-violet-500 text-violet-700 hover:text-white transition-all">
-                                    📊 Lihat Tes 2 Bag. 2
+                                    📊 Lihat Jawaban & Skor
                                 </a>
                             <?php else: ?>
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-400">
@@ -205,6 +231,44 @@ if (!$resultPegawai) {
                     <?php endwhile; ?>
                 </tbody>
             </table>
+        </div>
+
+        <?php
+            $baseParams = [];
+            if (!empty($tgl_mulai)) {
+                $baseParams['tgl_mulai'] = $tgl_mulai;
+            }
+            if (!empty($tgl_akhir)) {
+                $baseParams['tgl_akhir'] = $tgl_akhir;
+            }
+        ?>
+        <div class="mt-5 flex items-center justify-between flex-wrap gap-3">
+            <p class="text-xs text-slate-500">
+                Menampilkan <?= $totalRows > 0 ? ($offset + 1) : 0; ?> - <?= min($offset + $perPage, $totalRows); ?> dari <?= $totalRows; ?> data
+            </p>
+            <div class="flex items-center gap-2">
+                <?php
+                    $prevDisabled = $page <= 1;
+                    $nextDisabled = $page >= $totalPages;
+                    $prevParams = array_merge($baseParams, ['page' => max(1, $page - 1)]);
+                    $nextParams = array_merge($baseParams, ['page' => min($totalPages, $page + 1)]);
+                ?>
+                <?php if ($prevDisabled): ?>
+                    <span class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-400">Sebelumnya</span>
+                <?php else: ?>
+                    <a href="?<?= htmlspecialchars(http_build_query($prevParams)); ?>" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors">Sebelumnya</a>
+                <?php endif; ?>
+
+                <span class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-navy text-white">
+                    Halaman <?= $page; ?> / <?= $totalPages; ?>
+                </span>
+
+                <?php if ($nextDisabled): ?>
+                    <span class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-400">Berikutnya</span>
+                <?php else: ?>
+                    <a href="?<?= htmlspecialchars(http_build_query($nextParams)); ?>" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors">Berikutnya</a>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 

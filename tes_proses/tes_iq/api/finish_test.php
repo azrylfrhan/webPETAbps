@@ -1,5 +1,6 @@
 <?php
 require_once '../../../backend/config.php';
+require_once '../../../backend/test_attempt_functions.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -11,6 +12,7 @@ ini_set('display_errors', 1);
 
 try {
     $nip = trim($_SESSION['nip'] ?? ''); // Menambahkan TRIM untuk membuang spasi gaib
+    $attempt_id = $_SESSION['current_attempt_id'] ?? null;
 
     if (empty($nip)) {
         echo json_encode(['status' => 'error', 'message' => 'Sesi NIP kosong.']);
@@ -85,6 +87,14 @@ try {
     }
     $stmt2->execute();
 
+    // Complete attempt if using new attempt tracking
+    if ($attempt_id) {
+        $cek_attempts = $conn->query("SHOW TABLES LIKE 'test_attempts'");
+        if ($cek_attempts && $cek_attempts->num_rows > 0) {
+            completeAttempt($conn, $attempt_id);
+        }
+    }
+
     // UPDATE STATUS SESI
     $query_update_session = "UPDATE iq_test_sessions SET status = 'finished' WHERE nip = ?";
     $stmt3 = $conn->prepare($query_update_session);
@@ -98,6 +108,16 @@ try {
             'nip_user' => $nip,
             'total_jawaban_ditemukan' => $total_soal,
             'skor_pilihan_ganda' => $skor_pilgan,
+            'skor_bagian_4_isian' => $skor_isian,
+            'TOTAL_SKOR_DISIMPAN' => $skor_akhir,
+            'attempt_id' => $attempt_id
+        ]
+    ]);
+
+} catch (Exception $e) {
+    echo json_encode(['status' => 'fatal_error', 'message' => 'Error: ' . $e->getMessage()]);
+}
+?>
             'skor_bagian_4_isian' => $skor_isian,
             'TOTAL_SKOR_DISIMPAN' => $skor_akhir
         ]
