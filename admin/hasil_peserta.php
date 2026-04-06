@@ -6,10 +6,12 @@ $tgl_mulai = $_GET['tgl_mulai'] ?? '';
 $tgl_akhir = $_GET['tgl_akhir'] ?? '';
 
 $filterTanggal = '';
+$filterTanggalLegacy = '';
 if (!empty($tgl_mulai) && !empty($tgl_akhir)) {
     $tgl_mulai_safe = mysqli_real_escape_string($conn, $tgl_mulai);
     $tgl_akhir_safe = mysqli_real_escape_string($conn, $tgl_akhir);
     $filterTanggal = " AND DATE(ta.tanggal_mulai) BETWEEN '$tgl_mulai_safe' AND '$tgl_akhir_safe'";
+    $filterTanggalLegacy = " AND DATE(tgl_tes) BETWEEN '$tgl_mulai_safe' AND '$tgl_akhir_safe'";
 }
 
 $perPage = 10;
@@ -18,15 +20,61 @@ if ($page < 1) {
     $page = 1;
 }
 
-$countQuery = "
-SELECT COUNT(*) AS total
-FROM test_attempts ta
-JOIN users u ON u.nip = ta.nip
-WHERE u.role = 'peserta'
-    AND ta.status = 'finished'
-    $filterTanggal";
+$hasUnifiedAttempts = false;
+$checkUnified = mysqli_query($conn, "SHOW TABLES LIKE 'test_attempts'");
+if ($checkUnified && mysqli_num_rows($checkUnified) > 0) {
+    $hasUnifiedAttempts = true;
+}
 
-$countResult = mysqli_query($conn, $countQuery);
+$countQueryLegacy = "
+SELECT COUNT(*) AS total
+FROM (
+    SELECT r.user_id AS nip, r.tanggal AS tgl_tes
+    FROM iq_results r
+    JOIN users u ON u.nip = r.user_id
+    WHERE u.role = 'peserta'
+
+    UNION ALL
+
+    SELECT m.nip AS nip, m.tanggal_tes AS tgl_tes
+    FROM hasil_msdt m
+    JOIN users u ON u.nip = m.nip
+    WHERE u.role = 'peserta'
+
+    UNION ALL
+
+    SELECT p.nip AS nip, p.tanggal_tes AS tgl_tes
+    FROM hasil_papi p
+    JOIN users u ON u.nip = p.nip
+    WHERE u.role = 'peserta'
+) x
+WHERE 1=1
+$filterTanggalLegacy";
+
+$countQuery = '';
+if ($hasUnifiedAttempts) {
+    $countQuery = "
+    SELECT COUNT(*) AS total
+    FROM test_attempts ta
+    JOIN users u ON u.nip = ta.nip
+    WHERE u.role = 'peserta'
+        AND ta.status = 'finished'
+        $filterTanggal";
+} else {
+    $countQuery = $countQueryLegacy;
+}
+
+try {
+    $countResult = mysqli_query($conn, $countQuery);
+} catch (mysqli_sql_exception $e) {
+    if (stripos($e->getMessage(), "test_attempts") !== false && stripos($e->getMessage(), "doesn't exist") !== false) {
+        $hasUnifiedAttempts = false;
+        $countQuery = $countQueryLegacy;
+        $countResult = mysqli_query($conn, $countQuery);
+    } else {
+        throw $e;
+    }
+}
 if (!$countResult) {
     die("Query Error: " . mysqli_error($conn));
 }
@@ -39,23 +87,61 @@ if ($page > $totalPages) {
 $offset = ($page - 1) * $perPage;
 
 // Gunakan tabel unified test_attempts agar setiap percobaan tes muncul sebagai baris baru.
-$queryPegawai = "
-SELECT 
-    ta.id AS attempt_id,
-    ta.nip,
-    u.nama,
-    u.satuan_kerja,
-    ta.test_type,
-    ta.attempt_number,
-    ta.tanggal_mulai AS tgl_tes,
-    ta.alasan_tes
-FROM test_attempts ta
-JOIN users u ON u.nip = ta.nip
-WHERE u.role = 'peserta'
-    AND ta.status = 'finished'
-    $filterTanggal
-ORDER BY ta.tanggal_mulai DESC, ta.id DESC
-LIMIT $perPage OFFSET $offset";
+$queryPegawai = '';
+if ($hasUnifiedAttempts) {
+    $queryPegawai = "
+    SELECT 
+        ta.id AS attempt_id,
+        ta.nip,
+        u.nama,
+        u.satuan_kerja,
+        ta.test_type,
+        ta.attempt_number,
+        ta.tanggal_mulai AS tgl_tes,
+        ta.alasan_tes
+    FROM test_attempts ta
+    JOIN users u ON u.nip = ta.nip
+    WHERE u.role = 'peserta'
+        AND ta.status = 'finished'
+        $filterTanggal
+    ORDER BY ta.tanggal_mulai DESC, ta.id DESC
+    LIMIT $perPage OFFSET $offset";
+} else {
+    $queryPegawai = "
+    SELECT 
+        0 AS attempt_id,
+        x.nip,
+        x.nama,
+        x.satuan_kerja,
+        x.test_type,
+        1 AS attempt_number,
+        x.tgl_tes,
+        NULL AS alasan_tes
+    FROM (
+        SELECT r.user_id AS nip, u.nama, u.satuan_kerja, 'iq' AS test_type, r.tanggal AS tgl_tes
+        FROM iq_results r
+        JOIN users u ON u.nip = r.user_id
+        WHERE u.role = 'peserta'
+
+        UNION ALL
+
+        SELECT m.nip AS nip, u.nama, u.satuan_kerja, 'msdt' AS test_type, m.tanggal_tes AS tgl_tes
+        FROM hasil_msdt m
+        JOIN users u ON u.nip = m.nip
+        WHERE u.role = 'peserta'
+
+        UNION ALL
+
+        SELECT p.nip AS nip, u.nama, u.satuan_kerja, 'papi' AS test_type, p.tanggal_tes AS tgl_tes
+        FROM hasil_papi p
+        JOIN users u ON u.nip = p.nip
+        WHERE u.role = 'peserta'
+    ) x
+    WHERE 1=1
+    $filterTanggalLegacy
+    ORDER BY x.tgl_tes DESC
+    LIMIT $perPage OFFSET $offset";
+}
 
 // 2. Eksekusi kueri ke variabel $resultPegawai
 $resultPegawai = mysqli_query($conn, $queryPegawai);
