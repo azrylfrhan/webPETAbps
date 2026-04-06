@@ -265,6 +265,9 @@ if (!$resultPegawai) {
                         <td class="px-4 py-3.5 border-b border-slate-100">
                             <p class="text-sm font-semibold text-slate-700"><?= htmlspecialchars($row['nama']); ?></p>
                             <p class="text-xs text-slate-400 mt-0.5">NIP: <?= $row['nip']; ?></p>
+                            <a href="detail_pegawai.php?nip=<?= urlencode($row['nip']); ?>" class="inline-flex mt-2 items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-md transition-colors">
+                                Lihat Detail Pegawai
+                            </a>
                         </td>
 
                         <td class="px-4 py-3.5 border-b border-slate-100 text-sm text-slate-500">

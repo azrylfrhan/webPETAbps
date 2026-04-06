@@ -17,6 +17,7 @@ while($row = mysqli_fetch_assoc($result)) {
 // Ambil soal IQ dari skema khusus IQ
 $iqQuestions = [];
 $iqOptionsByQuestion = [];
+$iqFillAnswersByQuestion = [];
 
 $cekIqQuestions = mysqli_query($conn, "SHOW TABLES LIKE 'iq_questions'");
 $cekIqOptions   = mysqli_query($conn, "SHOW TABLES LIKE 'iq_options'");
@@ -61,6 +62,20 @@ if ($hasIqSchema) {
             $iqOptionsByQuestion[$qid] = [];
         }
         $iqOptionsByQuestion[$qid][] = $op;
+    }
+
+    $qFill = mysqli_query($conn, "
+        SELECT question_id, jawaban, nilai
+        FROM iq_fill_answers
+        ORDER BY question_id ASC, id ASC
+    ");
+
+    while ($fill = mysqli_fetch_assoc($qFill)) {
+        $qid = (int)$fill['question_id'];
+        if (!isset($iqFillAnswersByQuestion[$qid])) {
+            $iqFillAnswersByQuestion[$qid] = [];
+        }
+        $iqFillAnswersByQuestion[$qid][] = $fill;
     }
 }
 ?>
@@ -138,14 +153,14 @@ if ($hasIqSchema) {
 
     <!-- Tabs -->
     <div class="flex items-center gap-1 border-b-2 border-slate-200 mb-6">
-        <button class="tab-btn px-5 py-2.5 text-sm font-semibold text-slate-400 hover:text-slate-600 rounded-t-lg"
+        <button class="tab-btn active px-5 py-2.5 text-sm font-semibold text-blue-600 rounded-t-lg"
                 onclick="openTab(event, 'iq')">
             🧠 Tes IQ
             <span class="ml-2 text-xs font-bold bg-amber-50 text-amber-500 px-2 py-0.5 rounded-full">
                 <?= count($iqQuestions) ?>
             </span>
         </button>
-        <button class="tab-btn active px-5 py-2.5 text-sm font-semibold text-blue-600 rounded-t-lg"
+        <button class="tab-btn px-5 py-2.5 text-sm font-semibold text-slate-400 hover:text-slate-600 rounded-t-lg"
                 onclick="openTab(event, 'msdt')">
             📝 Bagian 1 (MSDT)
             <span class="ml-2 text-xs font-bold bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
@@ -163,7 +178,7 @@ if ($hasIqSchema) {
     </div>
 
     <!-- Tab: MSDT -->
-    <div id="msdt" class="tab-content active">
+    <div id="msdt" class="tab-content">
         <?php if(empty($soals['KEPRIBADIAN'])): ?>
             <div class="text-center py-16 text-slate-400">
                 <div class="text-5xl mb-3">📭</div>
@@ -259,7 +274,7 @@ if ($hasIqSchema) {
     </div>
 
     <!-- Tab: IQ -->
-    <div id="iq" class="tab-content">
+    <div id="iq" class="tab-content active">
         <?php if(!$hasIqSchema): ?>
             <div class="text-center py-16 text-slate-400">
                 <div class="text-5xl mb-3">🧠</div>
@@ -286,7 +301,7 @@ if ($hasIqSchema) {
                         </span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <a href="edit_soal_iq.php?id=<?= $q['id'] ?>"
+                        <a href="<?= ((int)($q['urutan'] ?? 0) === 4) ? 'edit_soal_iq_bagian4.php' : 'edit_soal_iq.php' ?>?id=<?= $q['id'] ?>"
                            class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 hover:bg-blue-500 text-blue-600 hover:text-white transition-all">
                             ✏️ Edit
                         </a>
@@ -295,7 +310,27 @@ if ($hasIqSchema) {
                 <div class="p-5">
                     <p class="text-sm font-medium text-slate-700 mb-3 leading-relaxed"><?= htmlspecialchars($q['pertanyaan'] ?? '-') ?></p>
 
-                    <?php if (!empty($q['jawaban_benar'])): ?>
+                    <?php if ((int)$q['urutan'] === 4): ?>
+                        <?php $fillAnswers = $iqFillAnswersByQuestion[(int)$q['id']] ?? []; ?>
+                        <?php if (!empty($fillAnswers)): ?>
+                            <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <span class="text-xs font-bold text-green-600 uppercase tracking-widest block mb-2">Jawaban Norma & Nilai</span>
+                                <div class="flex flex-wrap gap-2">
+                                    <?php foreach ($fillAnswers as $fill): ?>
+                                        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-green-200 text-xs font-semibold text-green-700">
+                                            <span><?= htmlspecialchars($fill['jawaban']) ?></span>
+                                            <span class="text-green-500">•</span>
+                                            <span>Nilai <?= (int)$fill['nilai'] ?></span>
+                                        </span>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                                Jawaban norma bagian 4 belum diisi.
+                            </div>
+                        <?php endif; ?>
+                    <?php elseif (!empty($q['jawaban_benar'])): ?>
                         <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                             <span class="text-xs font-bold text-green-600 uppercase tracking-widest block mb-1">Kunci Jawaban</span>
                             <p class="text-sm font-bold text-green-700"><?= htmlspecialchars($q['jawaban_benar']) ?></p>

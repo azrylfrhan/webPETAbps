@@ -29,6 +29,7 @@ if (!$user) { header("Location: status_pegawai.php"); exit(); }
 // Get all test attempts from unified table
 $all_attempts = [];
 $has_attempts_table = false;
+$is_legacy_mode = false;
 
 $cek_unified = mysqli_query($conn, "SHOW TABLES LIKE 'test_attempts'");
 if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
@@ -54,6 +55,75 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
     }
     
     // Sort by date descending
+    usort($all_attempts, function($a, $b) {
+        return strtotime($b['tanggal_mulai']) - strtotime($a['tanggal_mulai']);
+    });
+} else {
+    $is_legacy_mode = true;
+
+    $legacy_iq = mysqli_query($conn, "SELECT id, skor, tanggal FROM iq_results WHERE user_id = '$nip' ORDER BY tanggal DESC, id DESC");
+    $legacy_iq_attempt = 0;
+    if ($legacy_iq) {
+        while ($row = mysqli_fetch_assoc($legacy_iq)) {
+            $legacy_iq_attempt++;
+            $all_attempts[] = [
+                'attempt_id' => null,
+                'attempt_number' => $legacy_iq_attempt,
+                'tanggal_mulai' => $row['tanggal'] ?: date('Y-m-d H:i:s'),
+                'tanggal_selesai' => $row['tanggal'] ?: date('Y-m-d H:i:s'),
+                'alasan_tes' => null,
+                'status' => 'finished',
+                'test_type' => 'iq',
+                'skor_total' => (int)($row['skor'] ?? 0)
+            ];
+        }
+    }
+
+    $legacy_msdt = mysqli_query($conn, "SELECT * FROM hasil_msdt WHERE nip = '$nip' ORDER BY tanggal_tes DESC, id DESC");
+    $legacy_msdt_attempt = 0;
+    if ($legacy_msdt) {
+        while ($row = mysqli_fetch_assoc($legacy_msdt)) {
+            $legacy_msdt_attempt++;
+            $all_attempts[] = [
+                'attempt_id' => null,
+                'attempt_number' => $legacy_msdt_attempt,
+                'tanggal_mulai' => $row['tanggal_tes'] ?: date('Y-m-d H:i:s'),
+                'tanggal_selesai' => $row['tanggal_tes'] ?: date('Y-m-d H:i:s'),
+                'alasan_tes' => null,
+                'status' => 'finished',
+                'test_type' => 'msdt',
+                'TO_score' => (int)($row['TO_score'] ?? 0),
+                'RO_score' => (int)($row['RO_score'] ?? 0),
+                'E_score' => (int)($row['E_score'] ?? 0),
+                'O_score' => (int)($row['O_score'] ?? 0)
+            ];
+        }
+    }
+
+    $legacy_papi = mysqli_query($conn, "SELECT * FROM hasil_papi WHERE nip = '$nip' ORDER BY tanggal_tes DESC, id DESC");
+    $legacy_papi_attempt = 0;
+    if ($legacy_papi) {
+        while ($row = mysqli_fetch_assoc($legacy_papi)) {
+            $legacy_papi_attempt++;
+            $all_attempts[] = [
+                'attempt_id' => null,
+                'attempt_number' => $legacy_papi_attempt,
+                'tanggal_mulai' => $row['tanggal_tes'] ?: date('Y-m-d H:i:s'),
+                'tanggal_selesai' => $row['tanggal_tes'] ?: date('Y-m-d H:i:s'),
+                'alasan_tes' => null,
+                'status' => 'finished',
+                'test_type' => 'papi',
+                'G' => (int)($row['G'] ?? 0), 'L' => (int)($row['L'] ?? 0), 'I' => (int)($row['I'] ?? 0),
+                'T' => (int)($row['T'] ?? 0), 'V' => (int)($row['V'] ?? 0), 'S' => (int)($row['S'] ?? 0),
+                'R' => (int)($row['R'] ?? 0), 'D' => (int)($row['D'] ?? 0), 'C' => (int)($row['C'] ?? 0),
+                'E' => (int)($row['E'] ?? 0), 'N' => (int)($row['N'] ?? 0), 'A' => (int)($row['A'] ?? 0),
+                'P' => (int)($row['P'] ?? 0), 'X' => (int)($row['X'] ?? 0), 'B' => (int)($row['B'] ?? 0),
+                'O' => (int)($row['O'] ?? 0), 'K' => (int)($row['K'] ?? 0), 'F' => (int)($row['F'] ?? 0),
+                'W' => (int)($row['W'] ?? 0), 'Z' => (int)($row['Z'] ?? 0)
+            ];
+        }
+    }
+
     usort($all_attempts, function($a, $b) {
         return strtotime($b['tanggal_mulai']) - strtotime($a['tanggal_mulai']);
     });
@@ -173,11 +243,13 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                     <h3 class="text-2xl font-bold text-navy">Daftar Hasil Tes Pegawai</h3>
                     <p class="text-sm text-slate-500 mt-2 mb-5">Setiap percobaan tes tersimpan sebagai baris baru dan tidak menimpa riwayat sebelumnya.</p>
 
-                    <?php if (!$has_attempts_table): ?>
-                        <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                            ⚠️ Tabel tes belum diaktifkan. Jalankan migrasi database terlebih dahulu.
+                    <?php if ($is_legacy_mode): ?>
+                        <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+                            ⚠️ Menampilkan mode kompatibilitas (data legacy). Klik tombol tes untuk membuka jawaban pada halaman hasil tes yang sesuai.
                         </div>
-                    <?php elseif (empty($all_attempts)): ?>
+                    <?php endif; ?>
+
+                    <?php if (empty($all_attempts)): ?>
                         <div class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
                             Belum ada percobaan tes untuk pegawai ini.
                         </div>
@@ -222,10 +294,17 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                         <td class="px-4 py-4 text-center">
                                             <?php if ($attempt['test_type'] === 'iq'): ?>
                                                 <?php if ($isFinished): ?>
-                                                    <button onclick="showAttemptAnswers(<?= $attempt['attempt_id'] ?>, 'iq', 'Percobaan #<?= $attempt['attempt_number'] ?>')"
-                                                            class="inline-flex items-center gap-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-bold transition-all">
-                                                        📊 Lihat Jawaban & Skor
-                                                    </button>
+                                                    <?php if ($has_attempts_table && !empty($attempt['attempt_id'])): ?>
+                                                        <button onclick="showAttemptAnswers(<?= (int)$attempt['attempt_id'] ?>, 'iq', 'Percobaan #<?= $attempt['attempt_number'] ?>')"
+                                                                class="inline-flex items-center gap-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                            📊 Lihat Jawaban & Skor
+                                                        </button>
+                                                    <?php else: ?>
+                                                        <a href="hasil_iq.php?nip=<?= urlencode($nip) ?>"
+                                                           class="inline-flex items-center gap-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                            📊 Lihat Jawaban & Skor
+                                                        </a>
+                                                    <?php endif; ?>
                                                     <p class="text-[11px] text-slate-500 mt-1">Skor: <?= $scoreIq !== null ? (int)$scoreIq : '-' ?></p>
                                                 <?php else: ?>
                                                     <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-bold">Sedang Berjalan</span>
@@ -239,10 +318,17 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                         <td class="px-4 py-4 text-center">
                                             <?php if ($attempt['test_type'] === 'msdt'): ?>
                                                 <?php if ($isFinished): ?>
-                                                    <button onclick="showAttemptAnswers(<?= $attempt['attempt_id'] ?>, 'msdt', 'Percobaan #<?= $attempt['attempt_number'] ?>')"
-                                                            class="inline-flex items-center gap-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-full font-bold transition-all">
-                                                        📊 Lihat Jawaban & Skor
-                                                    </button>
+                                                    <?php if ($has_attempts_table && !empty($attempt['attempt_id'])): ?>
+                                                        <button onclick="showAttemptAnswers(<?= (int)$attempt['attempt_id'] ?>, 'msdt', 'Percobaan #<?= $attempt['attempt_number'] ?>')"
+                                                                class="inline-flex items-center gap-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                            📊 Lihat Jawaban & Skor
+                                                        </button>
+                                                    <?php else: ?>
+                                                        <a href="hasil_msdt.php?nip=<?= urlencode($nip) ?>"
+                                                           class="inline-flex items-center gap-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                            📊 Lihat Jawaban & Skor
+                                                        </a>
+                                                    <?php endif; ?>
                                                     <p class="text-[11px] text-slate-500 mt-1">TO: <?= $scoreMsdt !== null ? (int)$scoreMsdt : '-' ?></p>
                                                 <?php else: ?>
                                                     <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-bold">Sedang Berjalan</span>
@@ -256,10 +342,17 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                         <td class="px-4 py-4 text-center">
                                             <?php if ($attempt['test_type'] === 'papi'): ?>
                                                 <?php if ($isFinished): ?>
-                                                    <button onclick="showAttemptAnswers(<?= $attempt['attempt_id'] ?>, 'papi', 'Percobaan #<?= $attempt['attempt_number'] ?>')"
-                                                            class="inline-flex items-center gap-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-full font-bold transition-all">
-                                                        📊 Lihat Jawaban & Skor
-                                                    </button>
+                                                    <?php if ($has_attempts_table && !empty($attempt['attempt_id'])): ?>
+                                                        <button onclick="showAttemptAnswers(<?= (int)$attempt['attempt_id'] ?>, 'papi', 'Percobaan #<?= $attempt['attempt_number'] ?>')"
+                                                                class="inline-flex items-center gap-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                            📊 Lihat Jawaban & Skor
+                                                        </button>
+                                                    <?php else: ?>
+                                                        <a href="hasil_papi.php?nip=<?= urlencode($nip) ?>"
+                                                           class="inline-flex items-center gap-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                            📊 Lihat Jawaban & Skor
+                                                        </a>
+                                                    <?php endif; ?>
                                                     <p class="text-[11px] text-slate-500 mt-1">Total: <?= $scorePapi !== null ? (int)$scorePapi : '-' ?></p>
                                                 <?php else: ?>
                                                     <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-bold">Sedang Berjalan</span>
@@ -454,8 +547,18 @@ function showAttemptAnswers(attemptId, testType, attemptTitle) {
             } else if (data.test_type === 'iq') {
                 data.answers.forEach((item) => {
                     const sectionName = item.section;
-                    const isCorrect = item.user_answer && item.correct_answer &&
-                        item.user_answer.trim().toUpperCase() === item.correct_answer.trim().toUpperCase();
+                    const isGe = sectionName === 'GE' || (item.norm_answers && item.norm_answers.length > 0);
+                    const isCorrect = isGe
+                        ? (item.matched_norms && item.matched_norms.length > 0)
+                        : (item.user_answer && item.correct_answer && item.user_answer.trim().toUpperCase() === item.correct_answer.trim().toUpperCase());
+
+                    const userAnswerDisplay = item.user_answer || '(tidak dijawab)';
+                    const normBadge = isGe && item.norm_answers && item.norm_answers.length
+                        ? item.norm_answers.map((norm, idx) => {
+                            const matched = item.matched_norms && item.matched_norms.some(m => String(m.jawaban).trim().toLowerCase() === String(norm).trim().toLowerCase());
+                            return `<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold ${matched ? 'bg-green-100 border-green-300 text-green-700' : 'bg-white border-green-200 text-green-700'}">${norm}${item.norm_values && item.norm_values[idx] !== undefined ? `<span class="text-green-500">•</span><span>Nilai ${item.norm_values[idx]}</span>` : ''}</span>`;
+                        }).join(' ')
+                        : '';
 
                     html += `
                         <div class="border border-slate-200 rounded-lg p-3 ${isCorrect ? 'bg-green-50 border-green-300' : 'bg-slate-50'}">
@@ -471,11 +574,11 @@ function showAttemptAnswers(attemptId, testType, attemptTitle) {
                             <div class="grid grid-cols-2 gap-2 text-xs">
                                 <div>
                                     <p class="text-slate-600 font-semibold">Jawaban Anda:</p>
-                                    <p class="text-slate-800 font-mono bg-white px-2 py-1 rounded border border-slate-200 mt-1">${item.user_answer || '(tidak dijawab)'}</p>
+                                    <p class="text-slate-800 font-mono bg-white px-2 py-1 rounded border border-slate-200 mt-1">${userAnswerDisplay}</p>
                                 </div>
                                 <div>
                                     <p class="text-slate-600 font-semibold">Jawaban Benar:</p>
-                                    <p class="text-emerald-800 font-mono bg-white px-2 py-1 rounded border border-emerald-300 mt-1">${item.correct_answer}</p>
+                                    ${isGe ? `<div class="mt-1 flex flex-wrap gap-2">${normBadge || '<span class="text-slate-500">(norma belum diisi)</span>'}</div>` : `<p class="text-emerald-800 font-mono bg-white px-2 py-1 rounded border border-emerald-300 mt-1">${item.correct_answer || '-'}</p>`}
                                 </div>
                             </div>
                         </div>

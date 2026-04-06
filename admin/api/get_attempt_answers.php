@@ -40,6 +40,19 @@ try {
             ['ra', 77, 96], ['zr', 97, 116], ['fa', 117, 136], ['wu', 137, 156], ['me', 157, 176]
         ];
 
+        $fillAnswersByQuestion = [];
+        $stmtFill = $conn->prepare("SELECT question_id, jawaban, nilai FROM iq_fill_answers ORDER BY question_id ASC, id ASC");
+        $stmtFill->execute();
+        $resultFill = $stmtFill->get_result();
+        while ($fill = $resultFill->fetch_assoc()) {
+            $qid = (int)$fill['question_id'];
+            if (!isset($fillAnswersByQuestion[$qid])) {
+                $fillAnswersByQuestion[$qid] = [];
+            }
+            $fillAnswersByQuestion[$qid][] = $fill;
+        }
+        $stmtFill->close();
+
         $stmt = $conn->prepare("\n            SELECT\n                q.id,\n                q.pertanyaan,\n                q.jawaban_benar,\n                ua.jawaban_user\n            FROM iq_questions q\n            LEFT JOIN iq_attempt_answers ua ON q.id = ua.question_id AND ua.attempt_id = ?\n            ORDER BY q.id ASC\n        ");
         $stmt->bind_param('i', $attempt_id);
         $stmt->execute();
@@ -59,13 +72,37 @@ try {
                 }
             }
 
+            $normAnswers = $fillAnswersByQuestion[$q_id] ?? [];
+            $normTexts = [];
+            $normValues = [];
+            foreach ($normAnswers as $norm) {
+                $normTexts[] = $norm['jawaban'];
+                $normValues[] = (int)$norm['nilai'];
+            }
+
+            $matchedNorms = [];
+            if (!empty($q['jawaban_user']) && !empty($normAnswers)) {
+                $userAnswersArray = array_map('trim', explode(',', $q['jawaban_user']));
+                foreach ($normAnswers as $norm) {
+                    foreach ($userAnswersArray as $userSingleAnswer) {
+                        if (strcasecmp(trim($userSingleAnswer), trim($norm['jawaban'])) === 0) {
+                            $matchedNorms[] = $norm;
+                            break;
+                        }
+                    }
+                }
+            }
+
             $answers[] = [
                 'question_id' => $q['id'],
                 'section' => $section_name,
                 'question_number' => $q_number,
                 'question_text' => $q['pertanyaan'],
                 'user_answer' => $q['jawaban_user'],
-                'correct_answer' => $q['jawaban_benar']
+                'correct_answer' => $q['jawaban_benar'],
+                'norm_answers' => $normTexts,
+                'norm_values' => $normValues,
+                'matched_norms' => $matchedNorms
             ];
         }
     } elseif ($test_type === 'papi') {
