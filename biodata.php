@@ -56,7 +56,7 @@ if (biodataTableExists($conn) && !empty($nip)) {
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
 </head>
-<body class="min-h-screen bg-slate-200 font-sans">
+<body class="min-h-screen overflow-x-hidden bg-slate-200 font-sans">
 
 <div class="min-h-screen w-full grid lg:grid-cols-5 bg-white">
     <aside class="hidden lg:flex lg:col-span-2 flex-col justify-between bg-blue-600 p-12 text-white">
@@ -88,30 +88,30 @@ if (biodataTableExists($conn) && !empty($nip)) {
             </div>
     </aside>
 
-    <main class="lg:col-span-3 flex min-h-screen items-center justify-center bg-white px-6 py-10 sm:px-10">
+    <main class="lg:col-span-3 flex min-h-screen items-center justify-center bg-white px-4 py-8 sm:px-8 sm:py-10 lg:px-10">
         <div class="w-full max-w-2xl">
-            <div class="mb-6 flex items-center justify-between lg:hidden">
-                <div class="flex items-center gap-3">
+            <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:hidden">
+                <div class="flex items-center gap-2.5 sm:gap-3">
                     <img src="images/logobps.png" alt="Logo BPS" class="h-10 w-auto object-contain">
-                    <span class="text-sm font-bold tracking-wide text-navy">PETA - Pemetaan Potensi Pegawai</span>
+                    <span class="text-xs font-bold tracking-wide text-navy sm:text-sm">PETA - Pemetaan Potensi Pegawai</span>
                 </div>
-                <a href="logout.php" data-logout-url="logout.php" class="js-logout-trigger rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50">Logout</a>
+                <a href="logout.php" data-logout-url="logout.php" class="js-logout-trigger w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-xs font-bold text-slate-700 transition hover:bg-slate-50 sm:w-auto">Logout</a>
             </div>
 
-            <div class="mb-8 space-y-6">
+            <div class="mb-8 space-y-4 sm:space-y-6">
                 <div class="grid grid-cols-3 items-center gap-2">
                     <div class="h-[2px] bg-blue-500 relative"><span class="absolute -top-[5px] left-0 h-2.5 w-2.5 rounded-full bg-blue-500"></span></div>
                     <div class="h-[2px] bg-blue-500 relative"><span class="absolute -top-[5px] left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-blue-600 bg-white"></span></div>
                     <div class="h-[2px] bg-slate-200 relative"><span class="absolute -top-[5px] right-0 h-2.5 w-2.5 rounded-full bg-slate-300"></span></div>
                 </div>
-                <div class="grid grid-cols-3 gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                <div class="grid grid-cols-3 gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:text-[11px]">
                     <span class="text-blue-600">Login</span>
                     <span class="text-center text-blue-600">Isi Biodata</span>
                     <span class="text-right">Halaman Tes</span>
                 </div>
                 <div>
-                    <h2 class="text-3xl font-bold text-slate-800">Lengkapi Biodata Peserta</h2>
-                    <p class="mt-1 text-sm text-slate-500">Isi biodata dengan benar untuk melanjutkan ke tahap tes psikologi.</p>
+                    <h2 class="text-2xl font-bold text-slate-800 sm:text-3xl">Lengkapi Biodata Peserta</h2>
+                    <p class="mt-1 text-sm leading-relaxed text-slate-500">Isi biodata dengan benar untuk melanjutkan ke tahap tes psikologi.</p>
                 </div>
             </div>
 

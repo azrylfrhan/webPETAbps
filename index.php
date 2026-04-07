@@ -3,6 +3,7 @@
 <head>
     <link rel="icon" type="image/png" href="/images/logobps.png">
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Beranda | PETA — Pemetaan Potensi Pegawai</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -30,7 +31,7 @@
         .toggle-password:hover { color: #4f46e5; }
     </style>
 </head>
-<body class="min-h-screen bg-slate-200 font-sans">
+<body class="min-h-screen overflow-x-hidden bg-slate-200 font-sans">
 
 <div class="min-h-screen w-full grid lg:grid-cols-5">
     <aside class="hidden lg:flex lg:col-span-2 flex-col justify-between bg-blue-600 p-12 text-white">
@@ -59,23 +60,26 @@
         </div>
     </aside>
 
-    <main class="lg:col-span-3 flex min-h-screen items-center justify-center bg-white px-6 py-10 sm:px-10">
+    <main class="lg:col-span-3 flex min-h-screen items-center justify-center bg-white px-4 py-8 sm:px-8 sm:py-10 lg:px-10">
         <div class="w-full max-w-2xl">
-            <div class="mb-8 space-y-6">
-                <img src="images/logobps.png" alt="Logo BPS" class="h-12 w-auto lg:hidden">
+            <div class="mb-8 space-y-4 sm:space-y-6">
+                <img src="images/logobps.png" alt="Logo BPS" class="h-10 w-auto sm:h-12 lg:hidden">
+                <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800 lg:hidden">
+                    Login untuk melanjutkan pengisian biodata dan pengerjaan tes psikologi.
+                </div>
                 <div class="grid grid-cols-3 items-center gap-2">
                     <div class="h-[2px] bg-blue-500 relative"><span class="absolute -top-[5px] left-0 h-3 w-3 rounded-full border-2 border-blue-600 bg-white"></span></div>
                     <div class="h-[2px] bg-slate-200 relative"><span class="absolute -top-[5px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-slate-300"></span></div>
                     <div class="h-[2px] bg-slate-200 relative"><span class="absolute -top-[5px] right-0 h-2.5 w-2.5 rounded-full bg-slate-300"></span></div>
                 </div>
-                <div class="grid grid-cols-3 gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                <div class="grid grid-cols-3 gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:text-[11px]">
                     <span class="text-blue-600">Login</span>
                     <span class="text-center">Isi Biodata</span>
                     <span class="text-right">Halaman Tes</span>
                 </div>
                 <div>
-                    <h2 class="text-3xl font-bold text-slate-800">Masuk ke Sistem PETA</h2>
-                    <p class="mt-1 text-sm text-slate-500">Gunakan NIP dan password untuk mengakses tes psikologi pegawai.</p>
+                    <h2 class="text-2xl font-bold text-slate-800 sm:text-3xl">Masuk ke Sistem PETA</h2>
+                    <p class="mt-1 text-sm leading-relaxed text-slate-500">Gunakan NIP dan password untuk mengakses tes psikologi pegawai.</p>
                 </div>
             </div>
 
@@ -89,20 +93,20 @@
             </div>
             <?php endif; ?>
 
-            <form action="backend/login_process.php" method="POST" class="space-y-5">
+            <form action="backend/login_process.php" method="POST" class="space-y-4 sm:space-y-5">
                 <div class="auth-group">
                     <label class="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-600">NIP</label>
-                    <input type="text" name="nip" placeholder="Masukkan NIP Anda" required class="w-full rounded-md border border-gray-200 px-4 py-3 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                    <input type="text" name="nip" placeholder="Masukkan NIP Anda" required class="w-full rounded-md border border-gray-200 px-4 py-3.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:py-3">
                 </div>
 
                 <div class="auth-group">
                     <label class="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-600">Password</label>
-                    <input type="password" name="password" id="pass_login" placeholder="Masukkan Password" required class="w-full rounded-md border border-gray-200 px-4 py-3 pr-11 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                    <input type="password" name="password" id="pass_login" placeholder="Masukkan Password" required class="w-full rounded-md border border-gray-200 px-4 py-3.5 pr-11 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:py-3">
                     <i class="fi fi-rr-eye toggle-password" id="btn_toggle_login"></i>
                 </div>
 
                 <div class="pt-2">
-                    <button type="submit" class="w-full rounded-md bg-blue-600 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-blue-700">
+                    <button type="submit" class="w-full rounded-md bg-blue-600 px-4 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-blue-700 sm:py-3">
                         Login
                     </button>
                 </div>

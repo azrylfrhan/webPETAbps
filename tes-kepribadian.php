@@ -97,26 +97,26 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen overflow-x-hidden flex flex-col">
 
     <!-- HEADER -->
     <header class="bg-navy sticky top-0 z-50 shadow-md">
-        <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div class="max-w-6xl mx-auto px-4 py-3 sm:px-6 sm:h-16 sm:py-0 flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-                <img src="images/logobps.png" alt="Logo BPS" class="h-10">
+                <img src="images/logobps.png" alt="Logo BPS" class="h-9 sm:h-10">
                 <div>
-                    <p class="text-white font-extrabold text-sm uppercase tracking-wide leading-tight">Tes 2 — Bagian 1</p>
-                    <p class="text-blue-200 text-xs font-semibold uppercase tracking-widest">PETA — Pemetaan Potensi Pegawai</p>
+                    <p class="text-white font-extrabold text-xs sm:text-sm uppercase tracking-wide leading-tight">Tes 2 — Bagian 1</p>
+                    <p class="hidden text-blue-200 text-xs font-semibold uppercase tracking-widest sm:block">PETA — Pemetaan Potensi Pegawai</p>
                 </div>
             </div>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 sm:gap-4">
                 <div class="text-right">
                     <p class="text-white font-bold text-sm leading-tight"><?= htmlspecialchars($nama) ?></p>
-                    <p class="text-blue-200 text-xs"><?= htmlspecialchars($nip) ?></p>
+                    <p class="hidden text-blue-200 text-xs sm:block\"><?= htmlspecialchars($nip) ?></p>
                 </div>
-                <div id="timer-box" class="hidden bg-white/10 border border-white/20 px-4 py-2 rounded-xl text-center">
+                <div id="timer-box" class="hidden bg-white/10 border border-white/20 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-center">
                     <p class="text-[9px] font-black text-blue-200 uppercase tracking-widest">Sisa Waktu</p>
-                    <p id="timer-display" class="text-xl font-black text-white font-mono">30:00</p>
+                    <p id="timer-display" class="text-lg sm:text-xl font-black text-white font-mono">30:00</p>
                 </div>
             </div>
         </div>
@@ -127,11 +127,11 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
         <div id="progress-bar" class="bg-navy h-full transition-all duration-500" style="width:0%"></div>
     </div>
 
-    <main class="bg-grid flex-1 p-6">
+    <main class="bg-grid flex-1 p-4 sm:p-6">
 
         <!-- INSTRUKSI -->
         <section id="instruction-section" class="flex items-center justify-center min-h-[calc(100vh-5rem)]">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 w-full max-w-2xl p-10 fade-in">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 w-full max-w-2xl p-6 sm:p-10 fade-in">
                 <h2 class="text-2xl font-bold text-navy mb-6">Instruksi Tes</h2>
                 <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 text-slate-600 leading-relaxed mb-6 space-y-3">
                     <p>Pada halaman-halaman berikut, Anda akan membaca sejumlah pernyataan mengenai tindakan yang mungkin Anda lakukan dalam tugas Anda di unit kerja.</p>
@@ -142,7 +142,7 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
                     <p class="text-blue-700 text-sm font-semibold">Waktu pengerjaan: <strong>30 menit</strong>. Timer mulai saat Anda klik tombol di bawah.</p>
                 </div>
                 <button type="button" id="start-test-btn"
-                    class="bg-navy text-white px-8 py-3 rounded-xl font-semibold hover:opacity-90 transition">
+                    class="w-full sm:w-auto bg-navy text-white px-8 py-3 rounded-xl font-semibold hover:opacity-90 transition">
                     Mulai Kerjakan Soal
                 </button>
             </div>
@@ -162,7 +162,7 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
 
                 <?php foreach ($all_soal as $i => $row):
                     $no = $row['nomor_soal']; ?>
-                <div class="question-item bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-6"
+                 <div class="question-item bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-8 mb-6"
                      id="soal-item-<?= $no ?>"
                      data-nomor="<?= $i+1 ?>" data-no="<?= $no ?>" data-total="<?= $total ?>">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Soal <?= $no ?></p>
