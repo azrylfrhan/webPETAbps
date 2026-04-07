@@ -5,6 +5,94 @@
  */
 
 /**
+ * Check whether a table exists in current database.
+ */
+function taf_table_exists($conn, $tableName) {
+    static $cache = [];
+    $key = strtolower((string)$tableName);
+    if (array_key_exists($key, $cache)) {
+        return $cache[$key];
+    }
+
+    $safe = mysqli_real_escape_string($conn, $tableName);
+    $res = mysqli_query($conn, "SHOW TABLES LIKE '$safe'");
+    $exists = $res && mysqli_num_rows($res) > 0;
+    $cache[$key] = $exists;
+    return $exists;
+}
+
+/**
+ * Check whether a column exists in a table.
+ */
+function taf_column_exists($conn, $tableName, $columnName) {
+    if (!taf_table_exists($conn, $tableName)) {
+        return false;
+    }
+
+    $t = mysqli_real_escape_string($conn, $tableName);
+    $c = mysqli_real_escape_string($conn, $columnName);
+    $res = mysqli_query($conn, "SHOW COLUMNS FROM `$t` LIKE '$c'");
+    return $res && mysqli_num_rows($res) > 0;
+}
+
+/**
+ * Legacy fallback reset when unified attempts table is unavailable.
+ */
+function taf_legacy_reset($conn, $test_type, $nip) {
+    $ok = true;
+
+    if ($test_type === 'iq') {
+        if (taf_table_exists($conn, 'iq_test_sessions')) {
+            $stmt = $conn->prepare("DELETE FROM iq_test_sessions WHERE nip = ?");
+            $stmt->bind_param('s', $nip);
+            $ok = $stmt->execute() && $ok;
+            $stmt->close();
+        }
+        if (taf_table_exists($conn, 'iq_user_answers')) {
+            $stmt = $conn->prepare("DELETE FROM iq_user_answers WHERE user_nip = ?");
+            $stmt->bind_param('s', $nip);
+            $ok = $stmt->execute() && $ok;
+            $stmt->close();
+        }
+        if (taf_table_exists($conn, 'iq_user_section_progress')) {
+            $stmt = $conn->prepare("DELETE FROM iq_user_section_progress WHERE user_nip = ?");
+            $stmt->bind_param('s', $nip);
+            $ok = $stmt->execute() && $ok;
+            $stmt->close();
+        }
+        if (taf_table_exists($conn, 'iq_results')) {
+            $stmt = $conn->prepare("DELETE FROM iq_results WHERE user_id = ?");
+            $stmt->bind_param('s', $nip);
+            $ok = $stmt->execute() && $ok;
+            $stmt->close();
+        }
+    } elseif ($test_type === 'msdt') {
+        if (taf_table_exists($conn, 'hasil_msdt')) {
+            $stmt = $conn->prepare("DELETE FROM hasil_msdt WHERE nip = ?");
+            $stmt->bind_param('s', $nip);
+            $ok = $stmt->execute() && $ok;
+            $stmt->close();
+        }
+    } elseif ($test_type === 'papi') {
+        if (taf_table_exists($conn, 'hasil_papi')) {
+            $stmt = $conn->prepare("DELETE FROM hasil_papi WHERE nip = ?");
+            $stmt->bind_param('s', $nip);
+            $ok = $stmt->execute() && $ok;
+            $stmt->close();
+        }
+    }
+
+    if (taf_table_exists($conn, 'users') && taf_column_exists($conn, 'users', 'status_tes')) {
+        $stmt = $conn->prepare("UPDATE users SET status_tes = 'belum' WHERE nip = ?");
+        $stmt->bind_param('s', $nip);
+        $ok = $stmt->execute() && $ok;
+        $stmt->close();
+    }
+
+    return $ok;
+}
+
+/**
  * Create a new test attempt for an employee (IQ specific, delegates to generic)
  * 
  * @param mysqli $conn Database connection
@@ -24,6 +112,10 @@ function createTestAttempt($conn, $nip, $alasan_tes = '') {
  * @return array|null Attempt data, or null if none exists
  */
 function getCurrentAttempt($conn, $nip) {
+    if (!taf_table_exists($conn, 'test_attempts')) {
+        return null;
+    }
+
     $stmt = $conn->prepare("
         SELECT id, nip, attempt_number, status, tanggal_mulai, alasan_tes
         FROM test_attempts
@@ -221,6 +313,10 @@ function createTestAttemptGeneric($conn, $test_type, $nip, $alasan_tes = '') {
         return false;
     }
 
+    if (!taf_table_exists($conn, 'test_attempts')) {
+        return false;
+    }
+
     // Get next attempt number for this user and test type
     $query = "SELECT COALESCE(MAX(attempt_number), 0) + 1 as next_attempt FROM test_attempts WHERE nip = ? AND test_type = ?";
     $stmt = $conn->prepare($query);
@@ -255,6 +351,10 @@ function createTestAttemptGeneric($conn, $test_type, $nip, $alasan_tes = '') {
 function getAttemptHistoryGeneric($conn, $test_type, $nip) {
     $test_type = strtolower($test_type);
     if (!in_array($test_type, ['iq', 'papi', 'msdt'])) {
+        return [];
+    }
+
+    if (!taf_table_exists($conn, 'test_attempts')) {
         return [];
     }
 
@@ -335,6 +435,10 @@ function completeAttemptGeneric($conn, $test_type, $attempt_id) {
         return false;
     }
 
+    if (!taf_table_exists($conn, 'test_attempts')) {
+        return false;
+    }
+
     // Get attempt details
     $stmt = $conn->prepare("SELECT nip FROM test_attempts WHERE id = ? AND test_type = ?");
     $stmt->bind_param('is', $attempt_id, $test_type);
@@ -397,6 +501,11 @@ function resetTestWithHistoryGeneric($conn, $test_type, $nip, $alasan_tes = 'Res
     $test_type = strtolower($test_type);
     if (!in_array($test_type, ['iq', 'papi', 'msdt'])) {
         return false;
+    }
+
+    // Railway or old environments may not have unified attempts yet.
+    if (!taf_table_exists($conn, 'test_attempts')) {
+        return taf_legacy_reset($conn, $test_type, $nip);
     }
 
     // Mark current running attempt as incomplete
