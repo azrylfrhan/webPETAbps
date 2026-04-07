@@ -12,6 +12,20 @@ if (!$data) {
     echo "Data pengaturan sub-tes belum ada di database.";
     exit();
 }
+
+$durasiIstDetik = [
+    1 => 6 * 60,
+    2 => 6 * 60,
+    3 => 7 * 60,
+    4 => 8 * 60,
+    5 => 10 * 60,
+    6 => 10 * 60,
+    7 => 7 * 60,
+    8 => 9 * 60,
+    9 => 6 * 60,
+];
+
+$durasiAktifDetik = $durasiIstDetik[$sub_tes] ?? (int)($data['durasi_detik'] ?? 0);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -20,14 +34,22 @@ if (!$data) {
     <title>Petunjuk Kelompok Soal <?php echo str_pad($sub_tes, 2, '0', STR_PAD_LEFT); ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-    <style> body { font-family: 'Plus Jakarta Sans', sans-serif; } .bg-navy { background-color: #003366; } </style>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .bg-navy { background-color: #0f1e3c; }
+        .bg-grid {
+            background-image: radial-gradient(circle at 1px 1px, rgba(15, 30, 60, 0.08) 1px, transparent 0);
+            background-size: 22px 22px;
+        }
+    </style>
 </head>
-<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+<body class="bg-grid bg-slate-50 min-h-screen flex items-center justify-center p-4">
 
     <div class="max-w-3xl w-full bg-white rounded-3xl shadow-xl overflow-hidden">
         <div class="bg-navy p-8 text-white text-center">
             <h1 class="text-2xl font-bold mb-2">Petunjuk Kelompok Soal <?php echo str_pad($sub_tes, 2, '0', STR_PAD_LEFT); ?></h1>
             <p class="text-blue-200 text-sm font-semibold uppercase tracking-widest"><?php echo $data['nama_sub_tes']; ?></p>
+            <p class="mt-3 text-sm text-blue-100/90">Baca petunjuk dengan teliti sebelum memulai sub-tes.</p>
         </div>
 
         <div class="p-8">
@@ -74,7 +96,7 @@ if (!$data) {
             <div class="flex items-center justify-between border-t pt-8">
                 <div>
                     <p class="text-xs text-slate-400 font-bold uppercase">Waktu:</p>
-                    <p class="text-xl font-bold text-navy"><?php echo ($data['durasi_detik']/60); ?> Menit</p>
+                    <p class="text-xl font-bold text-navy"><?php echo ($durasiAktifDetik / 60); ?> Menit</p>
                 </div>
                 <button id="btn_mulai" disabled class="px-10 py-4 bg-slate-200 text-slate-400 rounded-2xl text-lg font-bold cursor-not-allowed">
                     Mulai Tes Sekarang
@@ -100,7 +122,7 @@ if (!$data) {
                 feedback.innerHTML = "✓ Jawaban Benar! (c. keledai)";
                 feedback.className = "mt-3 text-center text-sm font-bold text-green-600";
                 btnMulai.disabled = false;
-                btnMulai.className = "px-10 py-4 bg-navy text-white rounded-2xl text-lg font-bold hover:shadow-xl cursor-pointer";
+                btnMulai.className = "px-10 py-4 bg-navy text-white rounded-2xl text-lg font-bold hover:opacity-95 hover:shadow-xl cursor-pointer transition";
             } else {
                 feedback.innerHTML = "✗ Jawaban Salah. Silakan coba lagi.";
                 feedback.className = "mt-3 text-center text-sm font-bold text-red-500";

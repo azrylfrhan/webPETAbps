@@ -22,6 +22,25 @@ if (!$section) {
     exit;
 }
 
+// Durasi standar IST (detik)
+$durasiIst = [
+    1 => ['waktu_detik' => 6 * 60,  'waktu_hafalan' => null],
+    2 => ['waktu_detik' => 6 * 60,  'waktu_hafalan' => null],
+    3 => ['waktu_detik' => 7 * 60,  'waktu_hafalan' => null],
+    4 => ['waktu_detik' => 8 * 60,  'waktu_hafalan' => null],
+    5 => ['waktu_detik' => 10 * 60, 'waktu_hafalan' => null],
+    6 => ['waktu_detik' => 10 * 60, 'waktu_hafalan' => null],
+    7 => ['waktu_detik' => 7 * 60,  'waktu_hafalan' => null],
+    8 => ['waktu_detik' => 9 * 60,  'waktu_hafalan' => null],
+    9 => ['waktu_detik' => 6 * 60,  'waktu_hafalan' => 2 * 60],
+];
+
+$urutan = (int)($section['urutan'] ?? 0);
+if (isset($durasiIst[$urutan])) {
+    $section['waktu_detik'] = $durasiIst[$urutan]['waktu_detik'];
+    $section['waktu_hafalan'] = $durasiIst[$urutan]['waktu_hafalan'];
+}
+
 /* AMBIL CONTOH SOAL — include gambar soal */
 $stmt2 = $conn->prepare("
     SELECT id, pertanyaan, jawaban_benar, gambar

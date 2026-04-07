@@ -136,11 +136,11 @@ if (isset($_POST['bulk_action']) && !empty($_POST['selected_nip'])) {
     $action   = $_POST['action_type'];
     $nip_list = implode("','", array_map(fn($n) => mysqli_real_escape_string($conn, $n), $nips));
     switch ($action) {
-        case 'aktifkan':    mysqli_query($conn, "UPDATE users SET is_active=1 WHERE nip IN ('$nip_list')"); break;
+        case 'aktifkan':    mysqli_query($conn, "UPDATE users SET is_active=1, status_tes='belum' WHERE nip IN ('$nip_list')"); break;
         case 'nonaktifkan': mysqli_query($conn, "UPDATE users SET is_active=0 WHERE nip IN ('$nip_list')"); break;
         case 'reset_iq':
             // Use new history-aware reset function
-            $alasan = $_POST['alasan_tes'] ?? 'Reset tes oleh admin';
+            $alasan = '';
             foreach ($nips as $nip) {
                 $nip = mysqli_real_escape_string($conn, trim($nip));
                 resetTestWithHistoryGeneric($conn, 'iq', $nip, $alasan);
@@ -148,7 +148,7 @@ if (isset($_POST['bulk_action']) && !empty($_POST['selected_nip'])) {
             break;
         case 'reset_papi':
             // Use new history-aware reset function for PAPI
-            $alasan = $_POST['alasan_tes'] ?? 'Reset tes oleh admin';
+            $alasan = '';
             foreach ($nips as $nip) {
                 $nip = mysqli_real_escape_string($conn, trim($nip));
                 resetTestWithHistoryGeneric($conn, 'papi', $nip, $alasan);
@@ -156,7 +156,7 @@ if (isset($_POST['bulk_action']) && !empty($_POST['selected_nip'])) {
             break;
         case 'reset_msdt':
             // Use new history-aware reset function for MSDT
-            $alasan = $_POST['alasan_tes'] ?? 'Reset tes oleh admin';
+            $alasan = '';
             foreach ($nips as $nip) {
                 $nip = mysqli_real_escape_string($conn, trim($nip));
                 resetTestWithHistoryGeneric($conn, 'msdt', $nip, $alasan);
@@ -631,55 +631,10 @@ function clearAll() {
 function doBulk(action) {
     const n = document.querySelectorAll('.cb:checked').length;
     const lbl = {aktifkan:'mengaktifkan',nonaktifkan:'menonaktifkan',reset_iq:'mereset Tes IQ',reset_msdt:'mereset Tes Kepribadian Bagian 2',reset_papi:'mereset Tes Kepribadian Bagian 1'};
-    
-    // For all test resets, ask for reason
-    if (['reset_iq', 'reset_papi', 'reset_msdt'].includes(action)) {
-        if (!confirm(`Yakin ${lbl[action]} ${n} pegawai terpilih?\nTindakan ini tidak bisa dibatalkan.`)) return;
-        openReasonModal(action, n, lbl[action]);
-        return;
-    }
-    
+
     if (!confirm(`Yakin ${lbl[action]} ${n} pegawai terpilih?\nTindakan ini tidak bisa dibatalkan.`)) return;
     document.getElementById('at').value = action;
     document.getElementById('bf').submit();
-}
-
-function openReasonModal(action, count, actionLabel) {
-    document.getElementById('reasonModal').classList.remove('hidden');
-    document.getElementById('modal-title').innerText = `Masukkan Alasan ${actionLabel}`;
-    document.getElementById('reason-action').value = action;
-    document.getElementById('reason-count').innerText = count;
-    document.getElementById('reason-test-type').innerText = actionLabel.toLowerCase();
-    document.getElementById('alasan-input').value = '';
-    document.getElementById('alasan-input').focus();
-}
-
-function closeReasonModal() {
-    document.getElementById('reasonModal').classList.add('hidden');
-}
-
-function submitWithReason() {
-    const reason = document.getElementById('alasan-input').value.trim();
-    const action = document.getElementById('reason-action').value;
-    
-    if (!reason) {
-        alert('Silakan masukkan alasan tes terlebih dahulu');
-        return;
-    }
-    
-    // Add reason to form as hidden field
-    document.getElementById('bf').insertAdjacentHTML('beforeend', 
-        `<input type="hidden" name="alasan_tes" value="${escapeHtml(reason)}">`);
-    
-    document.getElementById('at').value = action;
-    closeReasonModal();
-    document.getElementById('bf').submit();
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 
 
@@ -700,43 +655,5 @@ document.addEventListener('keydown', e => {
 
 syncSelectAllState();
 </script>
-
-<!-- Modal Alasan Reset Tes -->
-<div id="reasonModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-        <div class="bg-navy p-6 text-white">
-            <h3 class="text-lg font-bold" id="modal-title">Masukkan Alasan Reset Tes</h3>
-        </div>
-        
-        <div class="p-6 space-y-4">
-            <p class="text-sm text-slate-700">
-                Anda akan mereset <span id="reason-test-type" class="font-semibold">tes</span> untuk <span id="reason-count" class="font-bold">0</span> pegawai. 
-                Tes sebelumnya akan disimpan dalam riwayat dan percobaan baru akan dibuat.
-            </p>
-            
-            <div>
-                <label class="text-sm font-semibold text-slate-700 block mb-2">Alasan Reset Tes</label>
-                <textarea 
-                    id="alasan-input"
-                    class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-700 resize-none"
-                    rows="4"
-                    placeholder="Contoh: Pegawai mengajukan ulang karena merasa kurang waktu di tes pertama"
-                ></textarea>
-            </div>
-            
-            <div class="flex gap-3 pt-2">
-                <button type="button" onclick="closeReasonModal()" 
-                        class="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-all">
-                    Batal
-                </button>
-                <button type="button" onclick="submitWithReason()"
-                        class="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-sm">
-                    Lanjutkan Reset
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-<input type="hidden" id="reason-action" name="reason_action" value="">
 </body>
 </html>

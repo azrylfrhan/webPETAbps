@@ -1,6 +1,7 @@
 <?php
 require_once('../../../backend/config.php');
 require_once '../../../backend/auth_check.php';
+require_once '../../../backend/test_attempt_functions.php';
 
 header('Content-Type: application/json');
 
@@ -24,6 +25,15 @@ $stmt = $conn->prepare("
 ");
 $stmt->bind_param("sis", $nip, $question_id, $answer);
 $result = $stmt->execute();
+
+// If attempt id is missing in session, recover latest running attempt to keep history separated per attempt.
+if (!$attempt_id) {
+    $currentAttempt = getCurrentAttempt($conn, $nip);
+    if ($currentAttempt && ($currentAttempt['status'] ?? '') === 'running') {
+        $attempt_id = (int)$currentAttempt['id'];
+        $_SESSION['current_attempt_id'] = $attempt_id;
+    }
+}
 
 // Also save to iq_attempt_answers if table exists and attempt_id is set
 if ($attempt_id) {

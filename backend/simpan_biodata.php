@@ -114,6 +114,17 @@ try {
         }
     }
 
+    if (usersStatusTesColumnExists($conn)) {
+        $stmtStatus = $conn->prepare("UPDATE users SET status_tes = 'proses' WHERE nip = ?");
+        if ($stmtStatus) {
+            $stmtStatus->bind_param('s', $nip);
+            if (!$stmtStatus->execute()) {
+                throw new Exception('Gagal memperbarui status tes peserta.');
+            }
+            $stmtStatus->close();
+        }
+    }
+
     $conn->commit();
     header('Location: ../dashboard.php?biodata=ok');
     exit;

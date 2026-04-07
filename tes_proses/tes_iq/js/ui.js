@@ -29,9 +29,12 @@ renderInstruction(section, example){
     }
 
     let html = `
-    <div class="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 w-full max-w-2xl p-10 fade-in">
-            <h2 class="text-2xl font-bold text-navy mb-6">Instruksi Tes</h2>
+    <div class="min-h-screen bg-grid bg-slate-100 flex items-center justify-center p-6">
+        <div class="bg-white rounded-3xl shadow-xl border border-slate-200 w-full max-w-2xl p-10 fade-in">
+            <div class="mb-6 rounded-2xl bg-gradient-to-r from-[#0f1e3c] via-[#1b3f74] to-[#5b9df3] px-5 py-4 text-white">
+                <p class="text-[11px] uppercase tracking-[0.2em] text-blue-100">Petunjuk Pengerjaan</p>
+                <h2 class="mt-1 text-2xl font-bold">Instruksi Tes IQ</h2>
+            </div>
             <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-8">
                 ${instrGambar}
                 <div class="text-slate-600 whitespace-pre-line leading-relaxed">
@@ -39,7 +42,7 @@ renderInstruction(section, example){
                 </div>
             </div>
             <button onclick="UI.renderExample()"
-                class="bg-navy text-white px-8 py-3 rounded-xl font-semibold hover:opacity-90 transition">
+                class="w-full bg-navy text-white px-8 py-3 rounded-xl font-semibold hover:opacity-90 transition">
                 Mulai Kerjakan Soal
             </button>
         </div>
@@ -82,8 +85,8 @@ renderMemory(items, waktuHafalan){
     const ss = String(waktuHafalan % 60).padStart(2,"0");
 
     let html = `
-    <div class="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 w-full max-w-2xl fade-in overflow-hidden">
+    <div class="min-h-screen bg-grid bg-slate-100 flex items-center justify-center p-6">
+        <div class="bg-white rounded-3xl shadow-xl border border-slate-200 w-full max-w-2xl fade-in overflow-hidden">
 
             <!-- Header -->
             <div class="px-8 pt-8 pb-5 flex items-center justify-between border-b border-slate-100">
@@ -155,10 +158,12 @@ renderExample(){
     const hasGambarOpt = hasOptions && example.options.some(o => o.gambar_opsi);
 
     let html = `
-    <div class="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 w-full max-w-2xl p-10 fade-in">
-            <h2 class="text-xl font-bold text-navy mb-2">Contoh Soal</h2>
-            <p class="text-slate-400 text-sm mb-6">Jawab contoh soal berikut sebelum memulai tes</p>`;
+    <div class="min-h-screen bg-grid bg-slate-100 flex items-center justify-center p-6">
+        <div class="bg-white rounded-3xl shadow-xl border border-slate-200 w-full max-w-2xl p-10 fade-in">
+            <div class="mb-6 rounded-2xl bg-blue-50 border border-blue-100 px-5 py-4">
+                <h2 class="text-xl font-bold text-navy mb-1">Contoh Soal</h2>
+                <p class="text-slate-500 text-sm">Jawab contoh soal berikut sebelum memulai tes.</p>
+            </div>`;
 
     if (example.gambar) {
         html += `
@@ -286,7 +291,7 @@ renderQuestion(data, nomor, total){
     const hasGambarOpt = hasOptions && data.options.some(o => o.gambar_opsi);
 
     let html = `
-    <div class="min-h-screen bg-slate-100 flex items-start justify-center p-6 pt-10">
+    <div class="min-h-screen bg-grid bg-slate-100 flex items-start justify-center p-6 pt-10">
         <div class="w-full max-w-2xl fade-in">
             <div class="flex justify-between items-center mb-3">
                 <span class="text-sm font-semibold text-slate-500">Soal ${nomor} dari ${total}</span>
@@ -295,7 +300,7 @@ renderQuestion(data, nomor, total){
             <div class="w-full bg-slate-200 rounded-full h-1.5 mb-6">
                 <div class="bg-navy h-1.5 rounded-full transition-all duration-500" style="width:${pct}%"></div>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">`;
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 p-8">`;
 
     if (data.gambar) {
         html += `
@@ -407,8 +412,8 @@ async renderFinish(){
     } catch(e) {}
 
     let html = `
-    <div class="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 w-full max-w-md p-10 text-center fade-in">
+    <div class="min-h-screen bg-grid bg-slate-100 flex items-center justify-center p-6">
+        <div class="bg-white rounded-3xl shadow-xl border border-slate-200 w-full max-w-md p-10 text-center fade-in">
             <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>

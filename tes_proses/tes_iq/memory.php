@@ -11,7 +11,10 @@ $nama = $_SESSION['nama'];
 
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tes IQ Bagian 9 - Hafalan</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <style>
 
@@ -19,22 +22,16 @@ $nama = $_SESSION['nama'];
    PAGE STYLE
 ================================ */
 
-body{
-    font-family: Arial, Helvetica, sans-serif;
-    background:#f4f6f9;
-    margin:0;
-}
+body{font-family:'Plus Jakarta Sans', sans-serif;background:#f1f5f9;margin:0;color:#1e293b;}
 
 .container{
-
     max-width:900px;
-    margin:60px auto;
-
+    margin:40px auto;
     background:white;
-    padding:40px;
-
-    border-radius:10px;
-
+    padding:32px;
+    border-radius:24px;
+    border:1px solid #e2e8f0;
+    box-shadow:0 12px 30px rgba(15, 23, 42, 0.08);
 }
 
 /* ===============================
@@ -42,16 +39,15 @@ body{
 ================================ */
 
 .header{
-
     text-align:center;
-    margin-bottom:30px;
-
+    margin-bottom:24px;
 }
 
 .header h2{
-
     margin-bottom:10px;
-
+    color:#0f1e3c;
+    font-size:30px;
+    font-weight:800;
 }
 
 /* ===============================
@@ -59,15 +55,15 @@ body{
 ================================ */
 
 .timer{
-
-    font-size:22px;
-    font-weight:bold;
-
-    color:#c0392b;
-
+    font-size:24px;
+    font-weight:800;
+    color:#b91c1c;
     text-align:center;
-    margin-bottom:30px;
-
+    margin-bottom:26px;
+    padding:14px;
+    border-radius:14px;
+    border:1px solid #fecaca;
+    background:#fef2f2;
 }
 
 /* ===============================
@@ -75,31 +71,29 @@ body{
 ================================ */
 
 .memory-row{
-
     display:flex;
-    font-size:20px;
-
-    margin-bottom:12px;
-
+    font-size:18px;
+    margin-bottom:10px;
+    padding:12px;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    background:#f8fafc;
 }
 
 .memory-category{
-
     width:160px;
-    font-weight:bold;
-
+    font-weight:700;
+    color:#0f1e3c;
 }
 
 .memory-colon{
-
     width:20px;
-
+    color:#475569;
 }
 
 .memory-words{
-
     flex:1;
-
+    color:#334155;
 }
 
 </style>
@@ -109,20 +103,37 @@ body{
 <body>
 
 
+<header class="bg-[#0f1e3c] text-white shadow-md">
+<div style="max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+        <img src="../../images/logobps.png" alt="Logo BPS" style="height:40px;width:auto;object-fit:contain;">
+        <div>
+            <p style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#93c5fd;margin:0;">Tes IQ</p>
+            <p style="font-weight:700;font-size:14px;margin:0;">PETA — Pemetaan Potensi Pegawai</p>
+        </div>
+    </div>
+    <div style="text-align:right;">
+        <p style="font-size:13px;font-weight:700;margin:0;"><?= htmlspecialchars($nama) ?></p>
+        <p style="font-size:12px;color:#bfdbfe;margin:0;"><?= htmlspecialchars($nip) ?></p>
+    </div>
+</div>
+</header>
+
+
 <div class="container">
 
 <div class="header">
 
 <h2>Hafalkan Kata Berikut</h2>
 
-<p>Anda memiliki waktu <strong>3 menit</strong> untuk menghafal daftar kata ini.</p>
+<p style="margin:0;color:#475569;line-height:1.6;">Anda memiliki waktu <strong>2 menit</strong> untuk menghafal daftar kata berikut sebelum lanjut ke soal hafalan.</p>
 
 </div>
 
 
 <div class="timer">
 
-Waktu Menghafal: <span id="timer">03:00</span>
+Waktu Menghafal: <span id="timer">02:00</span>
 
 </div>
 
@@ -190,10 +201,10 @@ fetch("api/get_memory.php")
 
 
 /* ===============================
-   TIMER 3 MENIT
+    TIMER 2 MENIT
 ================================ */
 
-let time = 180;
+let time = 120;
 
 let timer = setInterval(function(){
 
@@ -210,7 +221,7 @@ let timer = setInterval(function(){
         clearInterval(timer);
 
         document.getElementById("memory-list").innerHTML =
-        "<h3 style='text-align:center'>Waktu Hafalan Selesai</h3>";
+        "<h3 style='text-align:center;color:#0f1e3c'>Waktu hafalan selesai</h3>";
 
         setTimeout(function(){
 

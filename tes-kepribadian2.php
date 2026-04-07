@@ -55,13 +55,17 @@ define('WAKTU_DETIK', 45 * 60); // 45 menit
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; }
-        .bg-navy { background-color: #1a2b5e; }
-        .text-navy { color: #1a2b5e; }
+        .bg-navy { background-color: #0f1e3c; }
+        .text-navy { color: #0f1e3c; }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         input[type="radio"] { accent-color: #1a2b5e; width: 16px; height: 16px; flex-shrink: 0; }
         .timer-warning { color: #dc2626 !important; animation: pulse 1s infinite; }
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.6; } }
+        .bg-grid {
+            background-image: radial-gradient(circle at 1px 1px, rgba(15, 30, 60, 0.07) 1px, transparent 0);
+            background-size: 22px 22px;
+        }
 
         /* ── MODAL ── */
         #modal-belum-jawab {
@@ -128,7 +132,7 @@ define('WAKTU_DETIK', 45 * 60); // 45 menit
         <div id="progress-bar" class="bg-navy h-full transition-all duration-500" style="width:0%"></div>
     </div>
 
-    <main class="flex-1 p-6">
+    <main class="bg-grid flex-1 p-6">
 
         <!-- INSTRUKSI -->
         <section id="instruction-section" class="flex items-center justify-center min-h-[calc(100vh-5rem)]">

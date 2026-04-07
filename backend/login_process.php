@@ -41,7 +41,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if ($user['role'] == 'admin') {
                 header("Location: ../admin/index.php");
             } else {
-                header("Location: ../biodata.php");
+                $statusTes = strtolower(trim((string)($user['status_tes'] ?? 'proses')));
+                $sudahIsiBiodata = pesertaSudahIsiBiodata($conn, $nip);
+
+                if (!$sudahIsiBiodata || in_array($statusTes, ['belum', 'selesai'], true)) {
+                    header("Location: ../biodata.php");
+                } else {
+                    header("Location: ../dashboard.php");
+                }
             }
             exit();
 

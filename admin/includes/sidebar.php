@@ -47,8 +47,8 @@ $current = basename($_SERVER['PHP_SELF']);
 
         <p class="px-4 pt-4 pb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">Pengaturan</p>
 
-        <a href="../logout.php"
-           class="relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-[13.5px] font-medium transition-all duration-200 text-red-400 hover:text-white hover:bg-red-500/20">
+          <a href="../logout.php" data-logout-url="../logout.php"
+              class="js-logout-trigger relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-[13.5px] font-medium transition-all duration-200 text-red-400 hover:text-white hover:bg-red-500/20">
             <span>🚪</span> Logout
         </a>
     </nav>
@@ -67,3 +67,5 @@ $current = basename($_SERVER['PHP_SELF']);
     </a>
 
 </aside>
+
+<?php include __DIR__ . '/../../backend/logout_modal.php'; ?>

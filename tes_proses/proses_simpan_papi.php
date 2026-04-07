@@ -1,6 +1,7 @@
 <?php
 require_once '../backend/config.php';
 require_once '../backend/test_attempt_functions.php';
+require_once '../backend/biodata_check.php';
 require_once 'proses_papi.php'; 
 
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
@@ -115,6 +116,17 @@ if ($stmt->execute()) {
     // Mark attempt as finished
     if (!completeAttemptGeneric($conn, 'papi', $attempt_id)) {
         throw new Exception('Gagal menyelesaikan attempt PAPI.');
+    }
+
+    if (usersStatusTesColumnExists($conn)) {
+        $stmtStatus = $conn->prepare("UPDATE users SET status_tes = 'selesai' WHERE nip = ?");
+        if ($stmtStatus) {
+            $stmtStatus->bind_param('s', $nip);
+            if (!$stmtStatus->execute()) {
+                throw new Exception('Gagal memperbarui status tes selesai.');
+            }
+            $stmtStatus->close();
+        }
     }
 
     unset($_SESSION['current_attempt_id_papi']);

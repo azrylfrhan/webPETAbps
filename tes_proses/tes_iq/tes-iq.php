@@ -35,11 +35,15 @@ if ($session && $session['status'] === 'finished') {
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; }
-        .bg-navy { background-color: #1a2b5e; }
-        .text-navy { color: #1a2b5e; }
-        .hover\:border-navy:hover { border-color: #1a2b5e; }
+        .bg-navy { background-color: #0f1e3c; }
+        .text-navy { color: #0f1e3c; }
+        .hover\:border-navy:hover { border-color: #0f1e3c; }
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .bg-grid {
+            background-image: radial-gradient(circle at 1px 1px, rgba(15, 30, 60, 0.07) 1px, transparent 0);
+            background-size: 22px 22px;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -71,7 +75,7 @@ if ($session && $session['status'] === 'finished') {
         </div>
     </div>
 
-    <main id="app-viewport" class="flex-1 flex items-center justify-center p-6">
+    <main id="app-viewport" class="bg-grid flex-1 flex items-center justify-center p-6">
         <div class="text-center">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-navy mx-auto"></div>
             <p class="mt-4 text-slate-500 font-semibold">Menyiapkan Perangkat Tes...</p>
