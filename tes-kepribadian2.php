@@ -230,7 +230,7 @@ define('WAKTU_DETIK', 45 * 60); // 45 menit
     <script>
         const TOTAL_SOAL  = <?= $total ?>;
         const WAKTU_DETIK = <?= WAKTU_DETIK ?>;
-        const STORAGE_KEY = 'peta_tes2b2_timer_<?= $nip ?>';
+        const STORAGE_KEY = 'peta_tes2b2_timer_<?= $nip ?>_v45m';
 
         const NOMOR_SOAL_LIST = <?= json_encode(array_column($all_soal, 'nomor_soal')) ?>;
 
