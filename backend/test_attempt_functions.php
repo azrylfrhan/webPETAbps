@@ -36,6 +36,19 @@ function taf_column_exists($conn, $tableName, $columnName) {
 }
 
 /**
+ * Return the first column that exists in a table from a list of candidates.
+ */
+function taf_first_existing_column($conn, $tableName, array $candidates) {
+    foreach ($candidates as $candidate) {
+        if (taf_column_exists($conn, $tableName, $candidate)) {
+            return $candidate;
+        }
+    }
+
+    return null;
+}
+
+/**
  * Legacy fallback reset when unified attempts table is unavailable.
  */
 function taf_legacy_reset($conn, $test_type, $nip) {
@@ -43,42 +56,60 @@ function taf_legacy_reset($conn, $test_type, $nip) {
 
     if ($test_type === 'iq') {
         if (taf_table_exists($conn, 'iq_test_sessions')) {
-            $stmt = $conn->prepare("DELETE FROM iq_test_sessions WHERE nip = ?");
-            $stmt->bind_param('s', $nip);
-            $ok = $stmt->execute() && $ok;
-            $stmt->close();
+            $sessionNipColumn = taf_first_existing_column($conn, 'iq_test_sessions', ['nip', 'user_nip']);
+            if ($sessionNipColumn) {
+                $stmt = $conn->prepare("DELETE FROM iq_test_sessions WHERE `$sessionNipColumn` = ?");
+                $stmt->bind_param('s', $nip);
+                $ok = $stmt->execute() && $ok;
+                $stmt->close();
+            }
         }
         if (taf_table_exists($conn, 'iq_user_answers')) {
-            $stmt = $conn->prepare("DELETE FROM iq_user_answers WHERE user_nip = ?");
-            $stmt->bind_param('s', $nip);
-            $ok = $stmt->execute() && $ok;
-            $stmt->close();
+            $answerNipColumn = taf_first_existing_column($conn, 'iq_user_answers', ['user_nip', 'nip', 'user_id']);
+            if ($answerNipColumn) {
+                $stmt = $conn->prepare("DELETE FROM iq_user_answers WHERE `$answerNipColumn` = ?");
+                $stmt->bind_param('s', $nip);
+                $ok = $stmt->execute() && $ok;
+                $stmt->close();
+            }
         }
         if (taf_table_exists($conn, 'iq_user_section_progress')) {
-            $stmt = $conn->prepare("DELETE FROM iq_user_section_progress WHERE user_nip = ?");
-            $stmt->bind_param('s', $nip);
-            $ok = $stmt->execute() && $ok;
-            $stmt->close();
+            $progressNipColumn = taf_first_existing_column($conn, 'iq_user_section_progress', ['user_nip', 'nip', 'user_id']);
+            if ($progressNipColumn) {
+                $stmt = $conn->prepare("DELETE FROM iq_user_section_progress WHERE `$progressNipColumn` = ?");
+                $stmt->bind_param('s', $nip);
+                $ok = $stmt->execute() && $ok;
+                $stmt->close();
+            }
         }
         if (taf_table_exists($conn, 'iq_results')) {
-            $stmt = $conn->prepare("DELETE FROM iq_results WHERE user_id = ?");
-            $stmt->bind_param('s', $nip);
-            $ok = $stmt->execute() && $ok;
-            $stmt->close();
+            $resultsNipColumn = taf_first_existing_column($conn, 'iq_results', ['user_id', 'user_nip', 'nip']);
+            if ($resultsNipColumn) {
+                $stmt = $conn->prepare("DELETE FROM iq_results WHERE `$resultsNipColumn` = ?");
+                $stmt->bind_param('s', $nip);
+                $ok = $stmt->execute() && $ok;
+                $stmt->close();
+            }
         }
     } elseif ($test_type === 'msdt') {
         if (taf_table_exists($conn, 'hasil_msdt')) {
-            $stmt = $conn->prepare("DELETE FROM hasil_msdt WHERE nip = ?");
-            $stmt->bind_param('s', $nip);
-            $ok = $stmt->execute() && $ok;
-            $stmt->close();
+            $msdtNipColumn = taf_first_existing_column($conn, 'hasil_msdt', ['nip', 'user_nip']);
+            if ($msdtNipColumn) {
+                $stmt = $conn->prepare("DELETE FROM hasil_msdt WHERE `$msdtNipColumn` = ?");
+                $stmt->bind_param('s', $nip);
+                $ok = $stmt->execute() && $ok;
+                $stmt->close();
+            }
         }
     } elseif ($test_type === 'papi') {
         if (taf_table_exists($conn, 'hasil_papi')) {
-            $stmt = $conn->prepare("DELETE FROM hasil_papi WHERE nip = ?");
-            $stmt->bind_param('s', $nip);
-            $ok = $stmt->execute() && $ok;
-            $stmt->close();
+            $papiNipColumn = taf_first_existing_column($conn, 'hasil_papi', ['nip', 'user_nip']);
+            if ($papiNipColumn) {
+                $stmt = $conn->prepare("DELETE FROM hasil_papi WHERE `$papiNipColumn` = ?");
+                $stmt->bind_param('s', $nip);
+                $ok = $stmt->execute() && $ok;
+                $stmt->close();
+            }
         }
     }
 
