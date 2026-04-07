@@ -133,6 +133,7 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="icon" type="image/png" href="/images/logobps.png">
     <meta charset="UTF-8">
     <title>Detail Pegawai | Admin BPS</title>
     <script src="https://cdn.tailwindcss.com"></script>

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="icon" type="image/png" href="/images/logobps.png">
     <meta charset="UTF-8">
     <title>Beranda | PETA — Pemetaan Potensi Pegawai</title>
     <script src="https://cdn.tailwindcss.com"></script>

@@ -24,6 +24,7 @@ $last_activity = mysqli_query($conn, "
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="icon" type="image/png" href="/images/logobps.png">
     <meta charset="UTF-8">
     <title>Admin Dashboard - BPS Psikotes</title>
 

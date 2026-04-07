@@ -70,6 +70,7 @@ $users_query = mysqli_query($conn, "SELECT * FROM users $where_clause ORDER BY n
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="icon" type="image/png" href="/images/logobps.png">
     <meta charset="UTF-8">
     <title>Manajemen Pegawai | Admin</title>
     <link rel="stylesheet" href="../style.css">

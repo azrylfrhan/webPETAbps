@@ -30,6 +30,7 @@ $durasiAktifDetik = $durasiIstDetik[$sub_tes] ?? (int)($data['durasi_detik'] ?? 
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="icon" type="image/png" href="/images/logobps.png">
     <meta charset="UTF-8">
     <title>Petunjuk Kelompok Soal <?php echo str_pad($sub_tes, 2, '0', STR_PAD_LEFT); ?></title>
     <script src="https://cdn.tailwindcss.com"></script>

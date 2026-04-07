@@ -258,6 +258,7 @@ $page_end_row = $total > 0 ? ($offset + $rows_count) : 0;
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="icon" type="image/png" href="/images/logobps.png">
     <meta charset="UTF-8">
     <title>Status Tes Pegawai | Admin PETA</title>
     <script src="https://cdn.tailwindcss.com"></script>

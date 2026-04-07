@@ -8,6 +8,7 @@ $soal = $conn->query("SELECT id, pertanyaan FROM iq_questions WHERE section_id =
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="icon" type="image/png" href="/images/logobps.png">
     <meta charset="UTF-8">
     <title>Test Save Answer</title>
     <script src="https://cdn.tailwindcss.com"></script>

@@ -91,6 +91,7 @@ function h($value) {
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="icon" type="image/png" href="/images/logobps.png">
     <meta charset="UTF-8">
     <title>Edit Soal IQ Bagian 4 | Admin BPS</title>
     <script src="https://cdn.tailwindcss.com"></script>

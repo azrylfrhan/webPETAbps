@@ -39,6 +39,7 @@ $needs = [
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="icon" type="image/png" href="/images/logobps.png">
     <meta charset="UTF-8">
     <title>Hasil Tes 2 Bagian 2 | Admin PETA</title>
     <script src="https://cdn.tailwindcss.com"></script>

@@ -83,6 +83,7 @@ if ($hasIqSchema) {
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="icon" type="image/png" href="/images/logobps.png">
     <meta charset="UTF-8">
     <title>Kelola Soal | Admin BPS</title>
 

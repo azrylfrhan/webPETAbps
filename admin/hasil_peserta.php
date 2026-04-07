@@ -155,6 +155,7 @@ if (!$resultPegawai) {
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="icon" type="image/png" href="/images/logobps.png">
     <meta charset="UTF-8">
     <title>Hasil Tes Pegawai | Admin BPS</title>
     <script src="https://cdn.tailwindcss.com"></script>

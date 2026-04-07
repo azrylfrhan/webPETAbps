@@ -24,6 +24,7 @@ if (isset($_POST['tambah'])) {
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="icon" type="image/png" href="/images/logobps.png">
     <meta charset="UTF-8">
     <title>Tambah Soal Baru | Admin BPS</title>
 
