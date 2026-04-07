@@ -1,7 +1,14 @@
 <!DOCTYPE html>
+<?php
+$basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/');
+if ($basePath === '/' || $basePath === '.') {
+    $basePath = '';
+}
+$logoPath = $basePath . '/images/logobps.png';
+?>
 <html lang="id">
 <head>
-    <link rel="icon" type="image/png" href="/images/logobps.png">
+    <link rel="icon" type="image/png" href="<?= htmlspecialchars($logoPath) ?>">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Beranda | PETA — Pemetaan Potensi Pegawai</title>
@@ -67,7 +74,7 @@
 <div class="min-h-screen w-full grid lg:grid-cols-5">
     <aside class="hero-panel hidden lg:flex lg:col-span-2 flex-col justify-between p-12 text-white">
         <div class="flex items-center gap-3">
-            <img src="images/logobps.png" alt="Logo BPS" class="h-10 w-auto object-contain">
+            <img src="<?= htmlspecialchars($logoPath) ?>" alt="Logo BPS" class="h-10 w-auto object-contain">
             <span class="text-sm font-bold tracking-wide">PETA — Pemetaan Potensi Pegawai</span>
         </div>
 
@@ -108,7 +115,7 @@
     <main class="lg:col-span-3 flex min-h-screen items-start lg:items-center justify-center bg-white px-4 py-6 sm:px-8 sm:py-8 lg:px-10">
         <div class="w-full max-w-xl lg:max-w-2xl">
             <div class="mb-6 space-y-3 sm:space-y-4">
-                <img src="images/logobps.png" alt="Logo BPS" class="h-10 w-auto sm:h-12 lg:hidden">
+                <img src="<?= htmlspecialchars($logoPath) ?>" alt="Logo BPS" class="h-10 w-auto sm:h-12 lg:hidden">
                 <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800 lg:hidden">
                     Login untuk melanjutkan pengisian biodata dan pengerjaan tes psikologi.
                 </div>
