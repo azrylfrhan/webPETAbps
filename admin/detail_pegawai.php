@@ -301,10 +301,12 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                                             📊 Lihat Jawaban & Skor
                                                         </button>
                                                     <?php else: ?>
-                                                        <a href="hasil_iq.php?nip=<?= urlencode($nip) ?>"
-                                                           class="inline-flex items-center gap-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-bold transition-all">
-                                                            📊 Lihat Jawaban & Skor
-                                                        </a>
+                                                        <form method="POST" action="set_hasil_iq_context.php" class="inline">
+                                                            <input type="hidden" name="nip" value="<?= htmlspecialchars($nip) ?>">
+                                                            <button type="submit" class="inline-flex items-center gap-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                                📊 Lihat Jawaban & Skor
+                                                            </button>
+                                                        </form>
                                                     <?php endif; ?>
                                                     <p class="text-[11px] text-slate-500 mt-1">Skor: <?= $scoreIq !== null ? (int)$scoreIq : '-' ?></p>
                                                 <?php else: ?>
@@ -325,10 +327,13 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                                             📊 Lihat Jawaban & Skor
                                                         </button>
                                                     <?php else: ?>
-                                                        <a href="hasil_msdt.php?nip=<?= urlencode($nip) ?>"
-                                                           class="inline-flex items-center gap-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-full font-bold transition-all">
-                                                            📊 Lihat Jawaban & Skor
-                                                        </a>
+                                                        <form method="POST" action="set_result_context.php" class="inline">
+                                                            <input type="hidden" name="target" value="hasil_msdt.php">
+                                                            <input type="hidden" name="nip" value="<?= htmlspecialchars($nip) ?>">
+                                                            <button type="submit" class="inline-flex items-center gap-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                                📊 Lihat Jawaban & Skor
+                                                            </button>
+                                                        </form>
                                                     <?php endif; ?>
                                                     <p class="text-[11px] text-slate-500 mt-1">TO: <?= $scoreMsdt !== null ? (int)$scoreMsdt : '-' ?></p>
                                                 <?php else: ?>
@@ -349,10 +354,13 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                                             📊 Lihat Jawaban & Skor
                                                         </button>
                                                     <?php else: ?>
-                                                        <a href="hasil_papi.php?nip=<?= urlencode($nip) ?>"
-                                                           class="inline-flex items-center gap-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-full font-bold transition-all">
-                                                            📊 Lihat Jawaban & Skor
-                                                        </a>
+                                                        <form method="POST" action="set_result_context.php" class="inline">
+                                                            <input type="hidden" name="target" value="hasil_papi.php">
+                                                            <input type="hidden" name="nip" value="<?= htmlspecialchars($nip) ?>">
+                                                            <button type="submit" class="inline-flex items-center gap-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                                📊 Lihat Jawaban & Skor
+                                                            </button>
+                                                        </form>
                                                     <?php endif; ?>
                                                     <p class="text-[11px] text-slate-500 mt-1">Total: <?= $scorePapi !== null ? (int)$scorePapi : '-' ?></p>
                                                 <?php else: ?>

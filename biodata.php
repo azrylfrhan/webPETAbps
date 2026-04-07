@@ -54,12 +54,43 @@ if (biodataTableExists($conn) && !empty($nip)) {
     </script>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        .hero-panel {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(120deg, #0f1e3c, #12306b, #1d4ed8, #2563eb, #0f1e3c);
+            background-size: 300% 300%;
+            animation: gradientShift 14s ease infinite;
+        }
+
+        .hero-panel::before {
+            content: '';
+            position: absolute;
+            inset: -20%;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(255,255,255,0.16), transparent 28%),
+                radial-gradient(circle at 80% 30%, rgba(255,255,255,0.10), transparent 26%),
+                radial-gradient(circle at 40% 80%, rgba(255,255,255,0.08), transparent 30%);
+            animation: floatGlow 10s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes floatGlow {
+            0% { transform: translate3d(0, 0, 0) scale(1); }
+            100% { transform: translate3d(2.5%, -2%, 0) scale(1.06); }
+        }
     </style>
 </head>
 <body class="min-h-screen overflow-x-hidden bg-slate-200 font-sans">
 
 <div class="min-h-screen w-full grid lg:grid-cols-5 bg-white">
-    <aside class="hidden lg:flex lg:col-span-2 flex-col justify-between bg-blue-600 p-12 text-white">
+    <aside class="hero-panel hidden lg:flex lg:col-span-2 flex-col justify-between p-12 text-white">
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                     <img src="images/logobps.png" alt="Logo BPS" class="h-11 w-auto object-contain">
@@ -69,22 +100,31 @@ if (biodataTableExists($conn) && !empty($nip)) {
             </div>
 
             <div class="max-w-md">
-                <h2 class="text-5xl font-bold leading-tight">Lengkapi Data Peserta Tes</h2>
+                <h2 class="text-5xl font-bold leading-tight">Biodata Peserta</h2>
                 <p class="mt-6 text-base leading-relaxed text-blue-100/90">
-                    Pastikan biodata Anda benar agar hasil tes dapat diproses dengan akurat.
+                    Lengkapi data diri dasar dengan benar agar identitas peserta tercatat rapi di sistem.
                 </p>
                 <p class="mt-4 text-base leading-relaxed text-blue-100/80">
-                    Biodata diisi satu kali, lalu Anda cukup mengisi alasan mengikuti tes pada sesi berikutnya.
+                    Informasi seperti tempat lahir, tanggal lahir, dan email digunakan untuk keperluan administrasi.
                 </p>
             </div>
 
             <div class="rounded-xl bg-blue-700/80 p-5 ring-1 ring-white/20">
-                <p class="text-sm font-semibold uppercase tracking-wider text-blue-100">Petunjuk</p>
+                <p class="text-sm font-semibold uppercase tracking-wider text-blue-100">Panduan singkat</p>
                 <ul class="mt-3 space-y-2 text-sm leading-relaxed text-blue-100/90">
                     <li>1. Gunakan data pribadi yang valid dan aktif.</li>
-                    <li>2. Tulis alasan tes sesuai kebutuhan penilaian hari ini.</li>
-                    <li>3. Klik lanjut tes setelah data tersimpan.</li>
+                    <li>2. Pastikan email dapat dihubungi jika diperlukan admin.</li>
+                    <li>3. Simpan data setelah semua kolom terisi dengan benar.</li>
                 </ul>
+            </div>
+
+            <div class="mt-4 rounded-xl bg-white/10 p-5 ring-1 ring-white/15 backdrop-blur-sm">
+                <p class="text-sm font-semibold uppercase tracking-wider text-blue-100">Data yang dicatat</p>
+                <div class="mt-3 space-y-2 text-sm leading-relaxed text-blue-100/90">
+                    <p>• NIP sebagai identitas akun peserta.</p>
+                    <p>• Tempat lahir dan tanggal lahir untuk verifikasi data dasar.</p>
+                    <p>• Email untuk kontak administrasi bila diperlukan.</p>
+                </div>
             </div>
     </aside>
 
@@ -106,18 +146,18 @@ if (biodataTableExists($conn) && !empty($nip)) {
                 </div>
                 <div class="grid grid-cols-3 gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:text-[11px]">
                     <span class="text-blue-600">Login</span>
-                    <span class="text-center text-blue-600">Isi Biodata</span>
-                    <span class="text-right">Halaman Tes</span>
+                    <span class="text-center text-blue-600">Biodata</span>
+                    <span class="text-right">Selesai</span>
                 </div>
                 <div>
-                    <h2 class="text-2xl font-bold text-slate-800 sm:text-3xl">Lengkapi Biodata Peserta</h2>
-                    <p class="mt-1 text-sm leading-relaxed text-slate-500">Isi biodata dengan benar untuk melanjutkan ke tahap tes psikologi.</p>
+                    <h2 class="text-2xl font-bold text-slate-800 sm:text-3xl">Lengkapi Data Diri</h2>
+                    <p class="mt-1 text-sm leading-relaxed text-slate-500">Isi identitas dasar dengan benar agar data peserta tersimpan lengkap.</p>
                 </div>
             </div>
 
         <?php if ($biodataAda): ?>
             <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-                Biodata sudah tersimpan. Anda hanya perlu mengisi alasan mengikuti tes untuk melanjutkan.
+                Biodata sudah tersimpan.
             </div>
         <?php endif; ?>
 

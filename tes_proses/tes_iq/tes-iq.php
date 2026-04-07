@@ -39,8 +39,6 @@ if ($session && $session['status'] === 'finished') {
         .bg-navy { background-color: #0f1e3c; }
         .text-navy { color: #0f1e3c; }
         .hover\:border-navy:hover { border-color: #0f1e3c; }
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .bg-grid {
             background-image: radial-gradient(circle at 1px 1px, rgba(15, 30, 60, 0.07) 1px, transparent 0);
             background-size: 22px 22px;

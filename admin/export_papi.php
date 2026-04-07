@@ -32,6 +32,106 @@ while ($r = mysqli_fetch_assoc($result)) $rows[] = $r;
 $roles = ['G','L','I','T','V','S','R','D','C','E'];
 $needs = ['N','A','P','X','B','O','Z','K','F','W'];
 
+// Check if using unified schema
+$has_unified = false;
+$cek_unified = mysqli_query($conn, "SHOW TABLES LIKE 'test_attempts'");
+if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
+    $cek_results = mysqli_query($conn, "SHOW TABLES LIKE 'papi_attempt_results'");
+    if ($cek_results && mysqli_num_rows($cek_results) > 0) {
+        $has_unified = true;
+    }
+}
+
+if ($has_unified) {
+    // Use unified schema
+    $query_unified = "
+        SELECT u.nip, u.nama,
+               " . ($has_biodata ? "TIMESTAMPDIFF(YEAR, b.tanggal_lahir, CURDATE())" : "NULL") . " AS usia,
+               u.jabatan, u.satuan_kerja,
+               ta.nip AS nip_verify,
+               COALESCE(par.G, 0) AS G,
+               COALESCE(par.L, 0) AS L,
+               COALESCE(par.I, 0) AS I,
+               COALESCE(par.T, 0) AS T,
+               COALESCE(par.V, 0) AS V,
+               COALESCE(par.S, 0) AS S,
+               COALESCE(par.R, 0) AS R,
+               COALESCE(par.D, 0) AS D,
+               COALESCE(par.C, 0) AS C,
+               COALESCE(par.E, 0) AS E,
+               COALESCE(par.N, 0) AS N,
+               COALESCE(par.A, 0) AS A,
+               COALESCE(par.P, 0) AS P,
+               COALESCE(par.X, 0) AS X,
+               COALESCE(par.B, 0) AS B,
+               COALESCE(par.O, 0) AS O,
+               COALESCE(par.K, 0) AS K,
+               COALESCE(par.F, 0) AS F,
+               COALESCE(par.W, 0) AS W,
+               COALESCE(par.Z, 0) AS Z,
+               ta.tanggal_mulai AS tanggal_tes
+        FROM test_attempts ta
+        JOIN users u ON u.nip = ta.nip
+        LEFT JOIN papi_attempt_results par ON par.attempt_id = ta.id
+        " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+        WHERE u.role = 'peserta' AND ta.test_type = 'papi' AND ta.status = 'finished'
+        " . (!empty($where_date) ? str_replace('h.tanggal_tes', 'ta.tanggal_mulai', $where_date) : "") . "
+        ORDER BY u.nama ASC
+    ";
+    $query_unified = "
+        SELECT u.nip, u.nama,
+               " . ($has_biodata ? "TIMESTAMPDIFF(YEAR, b.tanggal_lahir, CURDATE())" : "NULL") . " AS usia,
+               u.jabatan, u.satuan_kerja,
+               COALESCE(par.G, 0) AS G,
+               COALESCE(par.L, 0) AS L,
+               COALESCE(par.I, 0) AS I,
+               COALESCE(par.T, 0) AS T,
+               COALESCE(par.V, 0) AS V,
+               COALESCE(par.S, 0) AS S,
+               COALESCE(par.R, 0) AS R,
+               COALESCE(par.D, 0) AS D,
+               COALESCE(par.C, 0) AS C,
+               COALESCE(par.E, 0) AS E,
+               COALESCE(par.N, 0) AS N,
+               COALESCE(par.A, 0) AS A,
+               COALESCE(par.P, 0) AS P,
+               COALESCE(par.X, 0) AS X,
+               COALESCE(par.B, 0) AS B,
+               COALESCE(par.O, 0) AS O,
+               COALESCE(par.K, 0) AS K,
+               COALESCE(par.F, 0) AS F,
+               COALESCE(par.W, 0) AS W,
+               COALESCE(par.Z, 0) AS Z,
+               ta.tanggal_mulai AS tanggal_tes
+        FROM test_attempts ta
+        JOIN users u ON u.nip = ta.nip
+        LEFT JOIN papi_attempt_results par ON par.attempt_id = ta.id
+        " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+        WHERE u.role = 'peserta' AND ta.test_type = 'papi' AND ta.status = 'finished'
+        " . (!empty($where_date) ? str_replace('h.tanggal_tes', 'ta.tanggal_mulai', $where_date) : "") . "
+        ORDER BY u.nama ASC
+    ";
+    $result = mysqli_query($conn, $query_unified);
+    $rows = [];
+    while ($r = mysqli_fetch_assoc($result)) $rows[] = $r;
+} else {
+    // Fall back to legacy
+    $query = "SELECT u.nama, u.nip,
+                     " . ($has_biodata ? "TIMESTAMPDIFF(YEAR, b.tanggal_lahir, CURDATE())" : "NULL") . " AS usia,
+                     u.jabatan, u.satuan_kerja, h.*
+              FROM hasil_papi h
+              JOIN users u ON h.nip = u.nip
+              " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+              WHERE u.role = 'peserta' $where_date
+              ORDER BY u.nama ASC";
+    $result = mysqli_query($conn, $query);
+    $rows = [];
+    while ($r = mysqli_fetch_assoc($result)) $rows[] = $r;
+}
+
+$roles = ['G','L','I','T','V','S','R','D','C','E'];
+$needs = ['N','A','P','X','B','O','Z','K','F','W'];
+
 header("Content-Type: application/vnd-ms-excel");
 header("Content-Disposition: attachment; filename=Rekap_Hasil_Tes-2_Bag-2.xls");
 header("Cache-Control: max-age=0");

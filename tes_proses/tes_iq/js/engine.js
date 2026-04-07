@@ -9,6 +9,13 @@ let sectionTime          = 0;
 let waktuHafalan         = 0;
 let timerInterval        = null;
 let remainingTime        = 0;
+let currentSectionQuestions = [];
+let currentQuestionData = null;
+let sectionQuestionsPromise = Promise.resolve();
+let answeredQuestionIds = new Set();
+let answeredQuestionNumbers = new Set();
+let touchedQuestionNumbers = new Set(); // Soal yang sudah dijawab ATAU di-skip
+let sectionTimeExpired = false;
 
 const IQ_API_BASE = 'api';
 
@@ -86,8 +93,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     try { data = JSON.parse(text); } catch(e) { loadSection(1); return; }
                     if (!data.section) { loadSection(1); return; }
                     document.getElementById("section-title").innerText = data.section.nama_bagian;
-                    startTimer(remainingTime);
-                    loadQuestion();
+                    sectionQuestionsPromise = loadSectionQuestions(data.section.urutan);
+                    Promise.resolve(sectionQuestionsPromise).finally(() => {
+                        startTimer(remainingTime);
+                        loadQuestion(saved.questionNumber);
+                    });
                 });
             return;
         } else {
@@ -117,6 +127,12 @@ function loadSection(id) {
             sectionTime          = parseInt(data.section.waktu_detik) || 300;
             waktuHafalan         = parseInt(data.section.waktu_hafalan) || 0;
             globalQuestionNumber = 1;
+            sectionTimeExpired   = false;
+            answeredQuestionIds  = new Set();
+            answeredQuestionNumbers = new Set();
+            touchedQuestionNumbers = new Set();
+            currentSectionQuestions = [];
+            sectionQuestionsPromise = loadSectionQuestions(data.section.urutan);
 
             clearInterval(timerInterval);
             timerInterval = null;
@@ -130,6 +146,43 @@ function loadSection(id) {
             }
         })
         .catch(err => console.error("Error loading section:", err));
+}
+
+function loadSectionQuestions(sectionUrutan) {
+    return fetch(`${IQ_API_BASE}/get_questions.php?section=${sectionUrutan}`)
+        .then(res => res.text())
+        .then(text => {
+            let data;
+            try { data = JSON.parse(text); }
+            catch(e) { console.error("section question list parse error:", text); return []; }
+
+            currentSectionQuestions = Array.isArray(data.questions) ? data.questions : [];
+            if (currentSectionQuestions.length > 0) {
+                // RESET answered tracking untuk bagian baru
+                answeredQuestionNumbers.clear();
+                answeredQuestionIds.clear();
+                touchedQuestionNumbers.clear();
+                
+                totalQuestions = currentSectionQuestions.length;
+                currentSectionQuestions.forEach(q => {
+                    const nomorSoal = parseInt(q.nomor_soal, 10);
+                    if (q.answered) {
+                        answeredQuestionIds.add(parseInt(q.id, 10));
+                        if (!Number.isNaN(nomorSoal)) {
+                            answeredQuestionNumbers.add(nomorSoal);
+                            touchedQuestionNumbers.add(nomorSoal); // Ditandai sebagai "touched"
+                        }
+                    }
+                });
+            }
+
+            return currentSectionQuestions;
+        })
+        .catch(err => {
+            console.error("Error loading section questions:", err);
+            currentSectionQuestions = [];
+            return [];
+        });
 }
 
 /* =========================================================
@@ -154,21 +207,46 @@ function loadMemoryItems(sectionDbId) {
 ========================================================= */
 
 function startExam() {
-    globalQuestionNumber = 1;
-    if (typeof setTesAktif === "function") setTesAktif(true);
-    enableFullscreen();
-    clearInterval(timerInterval);
-    timerInterval = null;
-    startTimer(sectionTime);
-    loadQuestion();
+    Promise.resolve(sectionQuestionsPromise).finally(() => {
+        globalQuestionNumber = 1;
+        if (typeof setTesAktif === "function") setTesAktif(true);
+        enableFullscreen();
+        clearInterval(timerInterval);
+        timerInterval = null;
+        startTimer(sectionTime);
+        loadQuestion(1);
+    });
 }
 
 /* =========================================================
    LOAD QUESTION
 ========================================================= */
 
-function loadQuestion() {
-    if (globalQuestionNumber > totalQuestions) { nextSection(); return; }
+function loadQuestion(questionNumber = globalQuestionNumber) {
+    globalQuestionNumber = questionNumber;
+    
+    // Jika user mencoba melompat ke soal melebihi total soal (ingin lanjut section)
+    if (globalQuestionNumber > totalQuestions) {
+        // Validasi semua soal sudah dijawab sebelum lanjut section
+        if (!isSectionFullyAnswered()) {
+            const unansweredList = Array.from({ length: totalQuestions }, (_, i) => i + 1)
+                .filter(no => !answeredQuestionNumbers.has(no));
+            
+            alert(`Semua soal pada bagian ini harus dijawab terlebih dahulu.\n\nSoal yang belum dijawab:\n${unansweredList.join(', ')}`);
+            
+            // Redirect ke soal pertama yang belum dijawab (non-recursive)
+            if (unansweredList.length > 0) {
+                globalQuestionNumber = unansweredList[0];
+                // Continue dengan normal fetch flow di bawah
+            } else {
+                return;
+            }
+        } else {
+            // Jika sudah fully answered, boleh lanjut ke section berikutnya
+            nextSection();
+            return;
+        }
+    }
 
     saveProgress();
 
@@ -181,9 +259,136 @@ function loadQuestion() {
 
             if (!data.exists) { nextSection(); return; }
 
-            UI.renderQuestion(data, globalQuestionNumber, totalQuestions);
+            currentQuestionData = data;
+            if (data.answered) {
+                answeredQuestionIds.add(parseInt(data.id, 10));
+                answeredQuestionNumbers.add(globalQuestionNumber);
+                touchedQuestionNumbers.add(globalQuestionNumber); // Mark sebagai touched jika sudah dijawab
+            }
+
+            const canFinishSection = isSectionFullyAnswered();
+            const remainingCount = getRemainingQuestionCount();
+            const answeredCount = getAnsweredQuestionCount();
+            const answeredPercent = totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0;
+
+            UI.renderQuestion(
+                data,
+                globalQuestionNumber,
+                totalQuestions,
+                buildQuestionNavigator(),
+                buildQuestionActions(canFinishSection, remainingCount),
+                answeredPercent,
+                answeredCount
+            );
         })
         .catch(err => console.error("Error loading question:", err));
+}
+
+function getAnsweredQuestionCount() {
+    return answeredQuestionNumbers.size;
+}
+
+function isSectionFullyAnswered() {
+    if (totalQuestions <= 0) return false;
+    return answeredQuestionNumbers.size >= totalQuestions;
+}
+
+function getRemainingQuestionCount() {
+    return Math.max(0, totalQuestions - getAnsweredQuestionCount());
+}
+
+function buildQuestionNavigator() {
+    const questions = currentSectionQuestions.length > 0
+        ? currentSectionQuestions
+        : Array.from({ length: totalQuestions }, (_, index) => ({
+            id: index + 1,
+            nomor_soal: index + 1,
+            answered: answeredQuestionIds.has(index + 1)
+        }));
+
+    if (!questions.length) return "";
+
+    const buttons = questions.map((question, index) => {
+        const parsedNumber = parseInt(question.nomor_soal, 10);
+        const questionNumber = !Number.isNaN(parsedNumber) ? parsedNumber : (index + 1);
+        const isActive = questionNumber === globalQuestionNumber;
+        const isAnswered = answeredQuestionNumbers.has(questionNumber) || question.answered;
+        const isTouched = touchedQuestionNumbers.has(questionNumber);
+        
+        // Disabled HANYA jika belum "touched" AND bukan soal pertama AND bukan soal aktif
+        const isDisabled = !isTouched && questionNumber !== 1 && !isActive;
+        
+        const classes = [
+            "question-nav-btn",
+            "inline-flex items-center justify-center rounded-xl border text-sm font-bold transition px-3 py-2",
+            isDisabled
+                ? "bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed"
+                : isActive
+                    ? "bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-300"  // Active = Blue (regardless of answered status)
+                    : isAnswered
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-400 hover:border-emerald-500 hover:bg-emerald-100"
+                        : "bg-white text-slate-500 border-slate-200 hover:border-navy hover:text-navy"
+        ].join(" ");
+
+        return `
+            <button type="button" onclick="${isDisabled ? 'return false' : `goToQuestion(${questionNumber})`}" ${isDisabled ? 'disabled' : ''} class="${classes}">
+                <span class="flex items-center gap-1.5">
+                    <span>${questionNumber}</span>
+                    ${isAnswered && !isActive ? '<span class="h-2 w-2 rounded-full bg-emerald-500"></span>' : ''}
+                    ${isDisabled ? '<span class="text-[10px]" title="Soal belum disentuh">🔒</span>' : ''}
+                </span>
+            </button>
+        `;
+    }).join("");
+
+    return `
+        <div class="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_20px_50px_rgba(15,30,60,0.08)]">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                <div>
+                    <p class="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">Navigasi Soal</p>
+                    <p class="mt-1 text-sm text-slate-500">Klik nomor soal yang sudah dijawab atau di-skip.</p>
+                </div>
+                <div class="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-navy"></span>Aktif</span>
+                    <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-emerald-500"></span>Terjawab</span>
+                </div>
+            </div>
+            <div class="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-6 lg:grid-cols-5 xl:grid-cols-6">
+                ${buttons}
+            </div>
+        </div>
+    `;
+}
+
+function buildQuestionActions(canFinishSection, remainingCount) {
+    const isLastQuestion = globalQuestionNumber === totalQuestions;
+    const isCurrentAnswered = answeredQuestionNumbers.has(globalQuestionNumber);
+    
+    let nextButtonText = isLastQuestion ? "Selesai & Lanjut Bagian Berikutnya" : "Lanjut ke Soal Berikutnya →";
+    let nextButtonClass = isCurrentAnswered 
+        ? "bg-navy text-white hover:opacity-90"
+        : "bg-slate-300 text-slate-500 cursor-not-allowed";
+    let nextButtonAttr = isCurrentAnswered ? "" : "disabled";
+
+    return `
+        <div class="mt-6 border-t border-slate-100 pt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="text-sm text-slate-500">
+                ${isCurrentAnswered
+                    ? "Soal sudah dijawab. Lanjut ke soal berikutnya atau lewati."
+                    : `Soal ini belum dijawab. Pilih jawaban atau lewati soal.`}
+            </div>
+            <div class="flex flex-col gap-3 sm:flex-row">
+            <button type="button" onclick="skipQuestionAndMarkTouched()"
+                class="w-full sm:w-auto inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 font-semibold text-slate-600 shadow-sm transition hover:border-navy hover:text-navy">
+                Lewati Soal
+            </button>
+            <button type="button" onclick="nextQuestionOrSection()" ${nextButtonAttr}
+                class="w-full sm:w-auto inline-flex items-center justify-center rounded-2xl px-5 py-3 font-semibold shadow-sm transition ${nextButtonClass}">
+                ${nextButtonText}
+            </button>
+            </div>
+        </div>
+    `;
 }
 
 /* =========================================================
@@ -198,9 +403,26 @@ function saveAnswer(questionId, label) {
     });
 }
 
+// Hanya save jawaban, tidak auto-navigate
+async function saveAnswerOnly(questionId, label) {
+    try {
+        await saveAnswer(questionId, label);
+        answeredQuestionIds.add(parseInt(questionId, 10));
+        answeredQuestionNumbers.add(globalQuestionNumber);
+        touchedQuestionNumbers.add(globalQuestionNumber);
+    } catch (e) {
+        console.error("Error saving answer:", e);
+    }
+    // Re-render untuk update button state
+    loadQuestion(globalQuestionNumber);
+}
+
 async function answerAndNext(questionId, label) {
     try {
         await saveAnswer(questionId, label);
+        answeredQuestionIds.add(parseInt(questionId, 10));
+        answeredQuestionNumbers.add(globalQuestionNumber);
+        touchedQuestionNumbers.add(globalQuestionNumber);
     } catch (e) {
         console.error("Error saving answer:", e);
     }
@@ -212,9 +434,193 @@ async function answerAndNext(questionId, label) {
 ========================================================= */
 
 function nextQuestion() {
-    globalQuestionNumber++;
-    if (globalQuestionNumber > totalQuestions) { nextSection(); return; }
-    loadQuestion();
+    loadQuestion(globalQuestionNumber + 1);
+}
+
+function syncAnsweredQuestionFromCurrentData() {
+    if (!currentQuestionData) return;
+    if (currentQuestionData.answered) {
+        answeredQuestionIds.add(currentQuestionData.id);
+    }
+}
+
+async function persistCurrentOpenAnswer() {
+    if (!currentQuestionData) return;
+
+    const hasOptions = currentQuestionData.options && currentQuestionData.options.length > 0;
+    if (hasOptions) return;
+
+    const inputEl = document.getElementById(`soal-input-${currentQuestionData.id}`);
+    if (!inputEl) return;
+
+    const value = inputEl.value.trim();
+    if (!value) return;
+
+    try {
+        await saveAnswer(currentQuestionData.id, value);
+        answeredQuestionIds.add(parseInt(currentQuestionData.id, 10));
+        answeredQuestionNumbers.add(globalQuestionNumber);
+    } catch (error) {
+        console.error("Error saving typed answer:", error);
+    }
+}
+
+async function goToQuestion(questionNumber) {
+    // Hanya bisa navigasi ke soal pertama atau soal yang sudah "touched"
+    if (questionNumber !== 1 && !touchedQuestionNumbers.has(questionNumber)) {
+        alert("Anda hanya bisa memilih soal yang sudah dijawab atau di-skip.");
+        return;
+    }
+    
+    try {
+        await persistCurrentOpenAnswer();
+    } catch (error) {
+        console.error("Error persisting answer:", error);
+    }
+    
+    loadQuestion(questionNumber);
+}
+
+async function skipQuestion() {
+    try {
+        await persistCurrentOpenAnswer();
+    } catch (error) {
+        console.error("Error persisting answer:", error);
+    }
+    
+    // Jika soal saat ini belum dijawab, minta konfirmasi
+    const isCurrentAnswered = answeredQuestionNumbers.has(globalQuestionNumber);
+    if (!isCurrentAnswered) {
+        const confirmSkip = confirm(
+            `Soal nomor ${globalQuestionNumber} belum dijawab.\n\nLanjut ke soal berikutnya tanpa menjawab?`
+        );
+        if (!confirmSkip) {
+            return;
+        }
+    }
+    
+    nextQuestion();
+}
+
+// Fungsi baru: skip soal dan mark sebagai "touched"
+async function skipQuestionAndMarkTouched() {
+    try {
+        await persistCurrentOpenAnswer();
+    } catch (error) {
+        console.error("Error persisting answer:", error);
+    }
+    
+    // Mark soal saat ini sebagai "touched" (bahkan jika belum dijawab)
+    touchedQuestionNumbers.add(globalQuestionNumber);
+    
+    // Lanjut ke soal berikutnya atau section berikutnya
+    if (globalQuestionNumber < totalQuestions) {
+        loadQuestion(globalQuestionNumber + 1);
+    } else {
+        // Sudah di soal terakhir, cek validasi untuk lanjut section
+        checkAndFinishSection();
+    }
+}
+
+// Fungsi baru: lanjut ke soal/section berikutnya
+async function nextQuestionOrSection() {
+    const isCurrentAnswered = answeredQuestionNumbers.has(globalQuestionNumber);
+    
+    if (!isCurrentAnswered) {
+        alert("Soal ini harus dijawab sebelum melanjut.");
+        return;
+    }
+    
+    try {
+        await persistCurrentOpenAnswer();
+    } catch (error) {
+        console.error("Error persisting answer:", error);
+    }
+    
+    // Mark sebagai touched
+    touchedQuestionNumbers.add(globalQuestionNumber);
+    
+    // Jika bukan soal terakhir, lanjut ke soal berikutnya
+    if (globalQuestionNumber < totalQuestions) {
+        loadQuestion(globalQuestionNumber + 1);
+    } else {
+        // Soal terakhir - cek validasi semua soal dijawab sebelum lanjut section
+        checkAndFinishSection();
+    }
+}
+
+// Fungsi baru: validasi dan finish section
+async function checkAndFinishSection() {
+    if (!isSectionFullyAnswered()) {
+        // Buat modal untuk tunjukkan soal yang belum dijawab
+        const unansweredList = Array.from({ length: totalQuestions }, (_, i) => i + 1)
+            .filter(no => !answeredQuestionNumbers.has(no));
+        
+        showIncompleteModal(unansweredList);
+        return;
+    }
+    
+    // Semua sudah dijawab, lanjut ke section berikutnya
+    nextSection();
+}
+
+// Fungsi tambahan: tampilkan modal untuk soal yang belum dijawab
+function showIncompleteModal(unansweredList) {
+    const html = `
+    <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+        <div class="rounded-3xl bg-white shadow-2xl max-w-md w-full p-8">
+            <div class="rounded-2xl bg-red-50 border border-red-100 px-4 py-3 mb-4">
+                <p class="text-sm font-bold text-red-700">⚠️ Soal Belum Lengkap</p>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 mb-3">Ada ${unansweredList.length} Soal yang Belum Dijawab</h3>
+            <p class="text-sm text-slate-600 mb-4">Mohon selesaikan soal berikut terlebih dahulu sebelum melanjutkan ke bagian berikutnya:</p>
+            
+            <div class="bg-slate-50 rounded-xl p-4 mb-6 max-h-40 overflow-y-auto">
+                <div class="flex flex-wrap gap-2">
+                    ${unansweredList.map(no => `
+                    <button onclick="goToQuestion(${no}); closeIncompleteModal();" 
+                        class="bg-red-100 hover:bg-red-200 text-red-700 font-bold px-3 py-2 rounded-lg text-sm transition">
+                        Soal ${no}
+                    </button>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <button onclick="closeIncompleteModal()" 
+                class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 rounded-xl transition">
+                Kembali Mengerjakan
+            </button>
+        </div>
+    </div>
+    `;
+    
+    const modalEl = document.createElement('div');
+    modalEl.id = 'incomplete-modal';
+    modalEl.innerHTML = html;
+    document.body.appendChild(modalEl);
+}
+
+function closeIncompleteModal() {
+    const modal = document.getElementById('incomplete-modal');
+    if (modal) modal.remove();
+}
+
+async function finishCurrentSection() {
+    if (sectionTimeExpired) {
+        nextSection();
+        return;
+    }
+
+    if (!isSectionFullyAnswered()) {
+        alert("Semua soal pada bagian ini harus dijawab dulu sebelum lanjut.");
+        return;
+    }
+
+    await persistCurrentOpenAnswer();
+    const proceed = confirm("Lanjut ke bagian berikutnya? Soal yang belum dijawab akan tetap kosong.");
+    if (proceed) {
+        nextSection();
+    }
 }
 
 /* =========================================================
@@ -264,9 +670,52 @@ function startTimer(seconds) {
         if (remainingTime <= 0) {
             clearInterval(timerInterval);
             timerInterval = null;
-            nextSection();
+            handleTimeExpired();
         }
     }, 1000);
+}
+
+async function handleTimeExpired() {
+    sectionTimeExpired = true;
+    lockQuestionControlsOnTimeout();
+
+    try {
+        await persistCurrentOpenAnswer();
+    } catch (error) {
+        console.error("Error saving answer on timeout:", error);
+    }
+
+    nextSection();
+}
+
+function lockQuestionControlsOnTimeout() {
+    const viewport = document.getElementById("app-viewport");
+    if (!viewport) return;
+
+    const controls = viewport.querySelectorAll("button, input, textarea, select");
+    controls.forEach(control => {
+        if (control.tagName === "BUTTON") {
+            control.disabled = true;
+        } else {
+            control.readOnly = true;
+            control.disabled = true;
+        }
+    });
+
+    const notice = document.createElement("div");
+    notice.className = "fixed inset-x-4 bottom-4 z-50 rounded-2xl bg-navy px-4 py-3 text-white shadow-2xl";
+    notice.innerHTML = `
+        <div class="flex items-center justify-between gap-3">
+            <div>
+                <p class="text-sm font-bold">Waktu habis</p>
+                <p class="text-xs text-blue-100">Bagian ini akan dilanjutkan otomatis.</p>
+            </div>
+            <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg font-black">→</span>
+        </div>
+    `;
+    document.body.appendChild(notice);
+
+    setTimeout(() => notice.remove(), 1500);
 }
 
 
@@ -281,7 +730,7 @@ function finishTest() {
     const viewport = document.getElementById("app-viewport");
     if (viewport) {
         viewport.innerHTML = `
-            <div class="text-center p-10 fade-in">
+            <div class="text-center p-10">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-navy mx-auto mb-4"></div>
                 <h2 class="text-xl font-bold text-navy">Memproses Hasil Tes...</h2>
                 <p class="text-slate-500 mt-2">Mohon tunggu sebentar, data Anda sedang disimpan.</p>

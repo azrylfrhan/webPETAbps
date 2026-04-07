@@ -2,7 +2,15 @@
 require_once '../backend/config.php';
 include '../backend/auth_check.php';
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$context = $_SESSION['admin_result_context'] ?? [];
 $nip_filter = trim($_GET['nip'] ?? '');
+if ($nip_filter === '' && !empty($context['target']) && $context['target'] === 'hasil_papi.php') {
+    $nip_filter = trim($context['nip'] ?? '');
+}
 
 if ($nip_filter !== '') {
     $stmt = $conn->prepare("SELECT u.nama, u.satuan_kerja, h.* 

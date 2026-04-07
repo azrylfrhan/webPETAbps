@@ -2,23 +2,52 @@
 require_once '../backend/config.php';
 include '../backend/auth_check.php';
 
-// Mengambil ringkasan data untuk dashboard
-$count_pegawai = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM users WHERE role = 'peserta'"))['total'];
-$count_msdt = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM hasil_msdt"))['total'];
-$count_papi = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM hasil_papi"))['total'];
+// Ringkasan dashboard
+$count_pegawai = (int)(mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM users WHERE role = 'peserta'"))['total'] ?? 0);
 
-// Mengambil jumlah hasil Tes IQ dari tabel iq_results
-$count_iq = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM iq_results"))['total'];
+$has_unified_attempts = false;
+$check_unified = mysqli_query($conn, "SHOW TABLES LIKE 'test_attempts'");
+if ($check_unified && mysqli_num_rows($check_unified) > 0) {
+    $has_unified_attempts = true;
+}
 
-// Mengambil 5 aktivitas terbaru dengan menambahkan UNION untuk hasil Tes IQ
-$last_activity = mysqli_query($conn, "
-    SELECT u.nama, 'MSDT' as jenis, h.tanggal_tes FROM hasil_msdt h JOIN users u ON h.nip = u.nip 
-    UNION 
-    SELECT u.nama, 'PAPI' as jenis, h.tanggal_tes FROM hasil_papi h JOIN users u ON h.nip = u.nip 
-    UNION
-    SELECT u.nama, 'IQ' as jenis, h.tanggal AS tanggal_tes FROM iq_results h JOIN users u ON h.user_id = u.nip
-    ORDER BY tanggal_tes DESC LIMIT 5
-");
+if ($has_unified_attempts) {
+    $count_iq = (int)(mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM test_attempts WHERE test_type='iq' AND status='finished'"))['total'] ?? 0);
+    $count_msdt = (int)(mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM test_attempts WHERE test_type='msdt' AND status='finished'"))['total'] ?? 0);
+    $count_papi = (int)(mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM test_attempts WHERE test_type='papi' AND status='finished'"))['total'] ?? 0);
+
+    $last_activity = mysqli_query($conn, "
+        SELECT u.nama, UPPER(ta.test_type) as jenis, ta.tanggal_mulai AS tanggal_tes, ta.attempt_number
+        FROM test_attempts ta
+        JOIN users u ON u.nip = ta.nip
+        WHERE ta.status='finished' AND u.role='peserta'
+        ORDER BY ta.tanggal_mulai DESC, ta.id DESC
+        LIMIT 8
+    ");
+} else {
+    $count_msdt = (int)(mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM hasil_msdt"))['total'] ?? 0);
+    $count_papi = (int)(mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM hasil_papi"))['total'] ?? 0);
+    $count_iq = (int)(mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM iq_results"))['total'] ?? 0);
+
+    $last_activity = mysqli_query($conn, "
+        SELECT u.nama, 'MSDT' as jenis, h.tanggal_tes, 1 AS attempt_number FROM hasil_msdt h JOIN users u ON h.nip = u.nip
+        UNION ALL
+        SELECT u.nama, 'PAPI' as jenis, h.tanggal_tes, 1 AS attempt_number FROM hasil_papi h JOIN users u ON h.nip = u.nip
+        UNION ALL
+        SELECT u.nama, 'IQ' as jenis, h.tanggal AS tanggal_tes, 1 AS attempt_number FROM iq_results h JOIN users u ON h.user_id = u.nip
+        ORDER BY tanggal_tes DESC LIMIT 8
+    ");
+}
+
+$total_hasil = $count_iq + $count_msdt + $count_papi;
+$coverage = $count_pegawai > 0 ? round(($total_hasil / ($count_pegawai * 3)) * 100) : 0;
+$coverage = max(0, min(100, $coverage));
+$last_activity_rows = [];
+if ($last_activity) {
+    while ($row = mysqli_fetch_assoc($last_activity)) {
+        $last_activity_rows[] = $row;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -56,150 +85,191 @@ $last_activity = mysqli_query($conn, "
     </script>
 
     <style>
+        :root {
+            --ink: #0f172a;
+            --sky: #0ea5e9;
+            --mint: #10b981;
+            --sun: #f59e0b;
+            --rose: #ef4444;
+        }
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
-
-        /* Sidebar active link indicator */
-        nav a.active {
-            background: linear-gradient(135deg, #2563EB, #3B82F6);
-            color: white;
-            box-shadow: 0 4px 12px rgba(37,99,235,0.35);
+        .dashboard-bg {
+            background:
+                radial-gradient(1200px 400px at 100% -10%, rgba(14,165,233,.15), transparent 60%),
+                radial-gradient(800px 340px at -10% 10%, rgba(16,185,129,.10), transparent 60%),
+                #f1f5f9;
         }
-        nav a.active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 3px;
-            height: 20px;
-            background: #38BDF8;
-            border-radius: 0 3px 3px 0;
+        .pulse-glow {
+            animation: pulseGlow 2.8s ease-in-out infinite;
         }
-
-        /* Card top border accent */
-        .card-blue::before  { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,#2563EB,#38BDF8); border-radius:12px 12px 0 0; }
-        .card-green::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,#10B981,#34D399); border-radius:12px 12px 0 0; }
-        .card-purple::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,#8B5CF6,#A78BFA); border-radius:12px 12px 0 0; }
-        .card-amber::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,#F59E0B,#FCD34D); border-radius:12px 12px 0 0; }
-
-        /* Custom scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+        @keyframes pulseGlow {
+            0%,100% { box-shadow: 0 0 0 0 rgba(14,165,233,.22); }
+            50% { box-shadow: 0 0 0 10px rgba(14,165,233,0); }
+        }
+        .reveal {
+            animation: revealUp .55s ease both;
+        }
+        @keyframes revealUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .reveal:nth-child(2){ animation-delay: .06s; }
+        .reveal:nth-child(3){ animation-delay: .12s; }
+        .reveal:nth-child(4){ animation-delay: .18s; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 999px; }
     </style>
 </head>
 
-<body class="bg-slate-100 flex min-h-screen">
+<body class="dashboard-bg flex min-h-screen">
 
 <?php include 'includes/sidebar.php'; ?>
 
-<div class="ml-[260px] flex-1 p-8">
+<div class="ml-[260px] flex-1 p-5 md:p-8">
 
-    <div class="flex items-start justify-between mb-8 pb-6 border-b border-slate-200">
-        <div>
-            <h1 class="text-2xl font-extrabold text-navy tracking-tight">Selamat Datang, Admin</h1>
-            <p class="text-slate-500 text-sm mt-1">Sistem Informasi PETA — Pemetaan Potensi Pegawai BPS Provinsi Sulawesi Utara.</p>
-        </div>
-        <div class="text-right text-sm text-slate-400">
-            <?= date('l, d F Y') ?>
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0b1f48] via-[#134b8a] to-[#0ea5e9] p-6 md:p-8 text-white mb-7 shadow-2xl reveal">
+        <div class="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/10"></div>
+        <div class="absolute -bottom-16 -left-10 w-64 h-64 rounded-full bg-cyan-200/20"></div>
+        <div class="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+            <div>
+                <p class="text-xs uppercase tracking-[0.18em] text-cyan-100 font-semibold">Admin Command Center</p>
+                <h1 class="mt-2 text-2xl md:text-3xl font-extrabold leading-tight">Dashboard Monitoring Psikotes PETA</h1>
+                <p class="mt-2 text-cyan-50/95 text-sm md:text-base">Ringkasan hasil tes, cakupan peserta, dan aktivitas terbaru dalam satu layar.</p>
+            </div>
+            <div class="grid grid-cols-2 gap-3 min-w-[220px]">
+                <div class="bg-white/10 backdrop-blur rounded-2xl p-3 border border-white/20">
+                    <p class="text-xs text-cyan-100">Tanggal</p>
+                    <p class="font-bold text-sm mt-1"><?= date('d M Y') ?></p>
+                </div>
+                <div class="bg-white/10 backdrop-blur rounded-2xl p-3 border border-white/20 pulse-glow">
+                    <p class="text-xs text-cyan-100">Coverage</p>
+                    <p class="font-bold text-sm mt-1"><?= $coverage ?>%</p>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-7">
 
-        <div class="relative bg-white rounded-xl p-6 flex items-center gap-5 shadow-sm border border-slate-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200 card-blue overflow-hidden">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl bg-blue-50 flex-shrink-0">
-                👥
+        <div class="reveal rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-lg transition">
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-xs font-semibold tracking-[0.14em] text-slate-400 uppercase">Peserta</p>
+                <span class="w-10 h-10 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.41 0-8 2.24-8 5v1h16v-1c0-2.76-3.59-5-8-5z"/></svg>
+                </span>
             </div>
-            <div>
-                <p class="text-3xl font-extrabold text-navy tracking-tight"><?= $count_pegawai ?></p>
-                <p class="text-slate-400 text-xs font-medium mt-1">Total Pegawai</p>
-            </div>
+            <p class="text-3xl font-extrabold text-slate-900 leading-none"><?= number_format($count_pegawai) ?></p>
+            <p class="text-xs text-slate-500 mt-2">Total peserta terdaftar</p>
+            <div class="mt-4 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full bg-sky-500" style="width:100%"></div></div>
         </div>
 
-        <div class="relative bg-white rounded-xl p-6 flex items-center gap-5 shadow-sm border border-slate-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200 card-green overflow-hidden">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl bg-emerald-50 flex-shrink-0">
-                📋
+        <div class="reveal rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-lg transition">
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-xs font-semibold tracking-[0.14em] text-slate-400 uppercase">Tes 1 IQ</p>
+                <span class="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M9 21h6v-1H9v1zm3-20a7 7 0 0 0-4 12.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-3.26A7 7 0 0 0 12 1z"/></svg>
+                </span>
             </div>
-            <div>
-                <p class="text-3xl font-extrabold text-navy tracking-tight"><?= $count_iq ?></p>
-                <p class="text-slate-400 text-xs font-medium mt-1">Hasil Tes 1</p>
-            </div>
+            <p class="text-3xl font-extrabold text-slate-900 leading-none"><?= number_format($count_iq) ?></p>
+            <p class="text-xs text-slate-500 mt-2">Attempt selesai tercatat</p>
+            <div class="mt-4 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full bg-amber-500" style="width:<?= min(100, $count_pegawai > 0 ? round(($count_iq / $count_pegawai) * 100) : 0) ?>%"></div></div>
         </div>
 
-        <div class="relative bg-white rounded-xl p-6 flex items-center gap-5 shadow-sm border border-slate-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200 card-purple overflow-hidden">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl bg-violet-50 flex-shrink-0">
-                📋
+        <div class="reveal rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-lg transition">
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-xs font-semibold tracking-[0.14em] text-slate-400 uppercase">Tes 2 Bagian 1</p>
+                <span class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zM7 17H5v-2h2zm0-4H5v-2h2zm0-4H5V7h2zm12 8H9V7h10z"/></svg>
+                </span>
             </div>
-            <div>
-                <p class="text-3xl font-extrabold text-navy tracking-tight"><?= $count_msdt ?></p>
-                <p class="text-slate-400 text-xs font-medium mt-1">Hasil Tes 2 - Bag. 1</p>
-            </div>
+            <p class="text-3xl font-extrabold text-slate-900 leading-none"><?= number_format($count_msdt) ?></p>
+            <p class="text-xs text-slate-500 mt-2">Hasil MSDT tersedia</p>
+            <div class="mt-4 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full bg-emerald-500" style="width:<?= min(100, $count_pegawai > 0 ? round(($count_msdt / $count_pegawai) * 100) : 0) ?>%"></div></div>
         </div>
 
-        <div class="relative bg-white rounded-xl p-6 flex items-center gap-5 shadow-sm border border-slate-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200 card-amber overflow-hidden">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl bg-amber-50 flex-shrink-0">
-                📋
+        <div class="reveal rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-lg transition">
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-xs font-semibold tracking-[0.14em] text-slate-400 uppercase">Tes 2 Bagian 2</p>
+                <span class="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5A4.5 4.5 0 0 1 6.5 4a4.93 4.93 0 0 1 3.5 1.5A4.93 4.93 0 0 1 13.5 4 4.5 4.5 0 0 1 18 8.5c0 3.78-3.4 6.86-8.55 11.54z"/></svg>
+                </span>
             </div>
-            <div>
-                <p class="text-3xl font-extrabold text-navy tracking-tight"><?= $count_papi ?></p>
-                <p class="text-slate-400 text-xs font-medium mt-1">Hasil Tes 2 - Bag. 2</p>
-            </div>
+            <p class="text-3xl font-extrabold text-slate-900 leading-none"><?= number_format($count_papi) ?></p>
+            <p class="text-xs text-slate-500 mt-2">Hasil PAPI tersedia</p>
+            <div class="mt-4 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full bg-rose-500" style="width:<?= min(100, $count_pegawai > 0 ? round(($count_papi / $count_pegawai) * 100) : 0) ?>%"></div></div>
         </div>
-
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-        <div class="flex items-center justify-between mb-5">
-            <h3 class="text-base font-bold text-navy">Aktivitas Tes Terbaru</h3>
-            <span class="text-xs text-slate-400 font-medium">5 data terakhir</span>
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        <div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 reveal">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-bold text-navy">Aktivitas Tes Terbaru</h3>
+                <span class="text-xs text-slate-400 font-medium"><?= count($last_activity_rows) ?> data</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr>
+                            <th class="text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50 rounded-l-lg">Nama Pegawai</th>
+                            <th class="text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50">Tes</th>
+                            <th class="text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50 rounded-r-lg">Waktu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (!empty($last_activity_rows)): ?>
+                            <?php foreach($last_activity_rows as $row): ?>
+                            <tr class="hover:bg-sky-50/60 transition-colors">
+                                <td class="px-4 py-3 border-b border-slate-100">
+                                    <span class="font-semibold text-slate-700 text-sm"><?= htmlspecialchars($row['nama']) ?></span>
+                                </td>
+                                <td class="px-4 py-3 border-b border-slate-100">
+                                    <?php if($row['jenis'] === 'MSDT'): ?>
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">Tes 2 Bag. 1</span>
+                                    <?php elseif($row['jenis'] === 'PAPI'): ?>
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700">Tes 2 Bag. 2</span>
+                                    <?php else: ?>
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">Tes 1 IQ</span>
+                                    <?php endif; ?>
+                                    <span class="ml-2 text-[11px] text-slate-400">#<?= (int)($row['attempt_number'] ?? 1) ?></span>
+                                </td>
+                                <td class="px-4 py-3 border-b border-slate-100 text-sm text-slate-500">
+                                    <?= !empty($row['tanggal_tes']) ? date('d M Y, H:i', strtotime($row['tanggal_tes'])) : '-' ?>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="3" class="text-center py-12 text-slate-400 text-sm">Belum ada aktivitas tes.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full border-collapse">
-                <thead>
-                    <tr>
-                        <th class="text-left text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50 rounded-l-lg">Nama Pegawai</th>
-                        <th class="text-left text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50">Jenis Tes</th>
-                        <th class="text-left text-xs font-bold text-slate-400 uppercase tracking-widest px-4 py-3 bg-slate-50 rounded-r-lg">Tanggal & Waktu</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php while($row = mysqli_fetch_assoc($last_activity)): ?>
-                    <tr class="hover:bg-blue-50/40 transition-colors">
-                        <td class="px-4 py-3 border-b border-slate-100">
-                            <span class="font-semibold text-slate-700 text-sm"><?= htmlspecialchars($row['nama']) ?></span>
-                        </td>
-                        <td class="px-4 py-3 border-b border-slate-100">
-                            <?php if($row['jenis'] == 'MSDT'): ?>
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
-                                    Tes 2 - Bag. 1
-                                </span>
-                            <?php elseif($row['jenis'] == 'PAPI'): ?>
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-violet-100 text-violet-700">
-                                    Tes 2 - Bag. 2
-                                </span>
-                            <?php else: ?>
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
-                                    Tes 1
-                                </span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="px-4 py-3 border-b border-slate-100 text-sm text-slate-500">
-                            <?= date('d M Y, H:i', strtotime($row['tanggal_tes'])) ?>
-                        </td>
-                    </tr>
-                    <?php endwhile; ?>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 reveal">
+            <h3 class="text-base font-bold text-navy mb-4">Aksi Cepat</h3>
+            <div class="space-y-3">
+                <a href="status_pegawai.php" class="block rounded-xl border border-slate-200 p-3 hover:bg-slate-50 transition">
+                    <p class="text-sm font-semibold text-slate-800">Kelola Data Pegawai</p>
+                    <p class="text-xs text-slate-500 mt-1">Import, edit, dan validasi akun peserta.</p>
+                </a>
+                <a href="hasil_peserta.php" class="block rounded-xl border border-slate-200 p-3 hover:bg-slate-50 transition">
+                    <p class="text-sm font-semibold text-slate-800">Pantau Hasil Tes</p>
+                    <p class="text-xs text-slate-500 mt-1">Filter berdasarkan tanggal dan export data.</p>
+                </a>
+                <a href="kelola_soal.php" class="block rounded-xl border border-slate-200 p-3 hover:bg-slate-50 transition">
+                    <p class="text-sm font-semibold text-slate-800">Kelola Bank Soal</p>
+                    <p class="text-xs text-slate-500 mt-1">Perbarui soal IQ/MSDT/PAPI dengan cepat.</p>
+                </a>
+            </div>
 
-                    <?php if(mysqli_num_rows($last_activity) == 0): ?>
-                    <tr>
-                        <td colspan="3" class="text-center py-12 text-slate-400 text-sm">
-                            <div class="text-4xl mb-3">🕒</div>
-                            Belum ada aktivitas tes.
-                        </td>
-                    </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+            <div class="mt-5 rounded-xl bg-slate-900 p-4 text-slate-100">
+                <p class="text-[11px] tracking-[0.14em] uppercase text-sky-300 font-semibold">Status Sistem</p>
+                <p class="mt-2 text-sm">Skema data aktif: <span class="font-bold"><?= $has_unified_attempts ? 'Unified Attempts' : 'Legacy' ?></span></p>
+                <p class="text-xs text-slate-300 mt-1">Total hasil tercatat: <?= number_format($total_hasil) ?></p>
+            </div>
         </div>
     </div>
 

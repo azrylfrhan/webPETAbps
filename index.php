@@ -29,12 +29,43 @@
             z-index: 10;
         }
         .toggle-password:hover { color: #4f46e5; }
+
+        .hero-panel {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(120deg, #0f1e3c, #12306b, #1d4ed8, #2563eb, #0f1e3c);
+            background-size: 300% 300%;
+            animation: gradientShift 14s ease infinite;
+        }
+
+        .hero-panel::before {
+            content: '';
+            position: absolute;
+            inset: -20%;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(255,255,255,0.16), transparent 28%),
+                radial-gradient(circle at 80% 30%, rgba(255,255,255,0.10), transparent 26%),
+                radial-gradient(circle at 40% 80%, rgba(255,255,255,0.08), transparent 30%);
+            animation: floatGlow 10s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes floatGlow {
+            0% { transform: translate3d(0, 0, 0) scale(1); }
+            100% { transform: translate3d(2.5%, -2%, 0) scale(1.06); }
+        }
     </style>
 </head>
 <body class="min-h-screen overflow-x-hidden bg-slate-200 font-sans">
 
 <div class="min-h-screen w-full grid lg:grid-cols-5">
-    <aside class="hidden lg:flex lg:col-span-2 flex-col justify-between bg-blue-600 p-12 text-white">
+    <aside class="hero-panel hidden lg:flex lg:col-span-2 flex-col justify-between p-12 text-white">
         <div class="flex items-center gap-3">
             <img src="images/logobps.png" alt="Logo BPS" class="h-10 w-auto object-contain">
             <span class="text-sm font-bold tracking-wide">PETA — Pemetaan Potensi Pegawai</span>
@@ -43,14 +74,14 @@
         <div class="max-w-md">
             <h2 class="text-5xl font-bold leading-tight">Sistem Tes Psikologi Pegawai</h2>
             <p class="mt-6 text-base leading-relaxed text-blue-100/90">
-                PETA digunakan untuk memetakan potensi pegawai melalui tes intelektual dan kepribadian kerja.
+                PETA digunakan untuk memetakan potensi Pegawai Badan Pusat Statistik melalui tes intelektual dan kepribadian kerja.
             </p>
             <p class="mt-4 text-base leading-relaxed text-blue-100/80">
                 Masuk menggunakan akun Anda untuk memulai proses tes sesuai jadwal.
             </p>
         </div>
 
-        <div class="rounded-xl bg-blue-700/80 p-5 ring-1 ring-white/20">
+        <div class="mt-4 rounded-xl bg-white/10 p-5 ring-1 ring-white/15 backdrop-blur-sm">
             <p class="text-sm font-semibold uppercase tracking-wider text-blue-100">Alur singkat</p>
             <ul class="mt-3 space-y-2 text-sm leading-relaxed text-blue-100/90">
                 <li>1. Login dengan NIP dan password.</li>
@@ -58,11 +89,25 @@
                 <li>3. Kerjakan tes hingga selesai.</li>
             </ul>
         </div>
+
+        <div class="mt-4 rounded-xl bg-white/10 p-5 ring-1 ring-white/15 backdrop-blur-sm">
+            <p class="text-sm font-semibold uppercase tracking-wider text-blue-100">Sebelum masuk</p>
+            <div class="mt-3 space-y-2 text-sm leading-relaxed text-blue-100/90">
+                <p>• Pastikan NIP aktif dan password sesuai.</p>
+                <p>• Gunakan perangkat yang nyaman untuk mengerjakan tes.</p>
+                <p>• Riwayat tes tetap tersimpan per percobaan dan per tanggal.</p>
+            </div>
+        </div>
+
+        <div class="mt-4 rounded-xl border border-white/15 bg-white/10 p-4 text-sm leading-relaxed text-blue-100/90 backdrop-blur-sm">
+            <p class="font-semibold text-white">Bantuan singkat</p>
+            <p class="mt-1">Jika login gagal, cek status akun atau hubungi admin untuk aktivasi jadwal tes.</p>
+        </div>
     </aside>
 
-    <main class="lg:col-span-3 flex min-h-screen items-center justify-center bg-white px-4 py-8 sm:px-8 sm:py-10 lg:px-10">
-        <div class="w-full max-w-2xl">
-            <div class="mb-8 space-y-4 sm:space-y-6">
+    <main class="lg:col-span-3 flex min-h-screen items-start lg:items-center justify-center bg-white px-4 py-6 sm:px-8 sm:py-8 lg:px-10">
+        <div class="w-full max-w-xl lg:max-w-2xl">
+            <div class="mb-6 space-y-3 sm:space-y-4">
                 <img src="images/logobps.png" alt="Logo BPS" class="h-10 w-auto sm:h-12 lg:hidden">
                 <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800 lg:hidden">
                     Login untuk melanjutkan pengisian biodata dan pengerjaan tes psikologi.
@@ -78,8 +123,38 @@
                     <span class="text-right">Halaman Tes</span>
                 </div>
                 <div>
-                    <h2 class="text-2xl font-bold text-slate-800 sm:text-3xl">Masuk ke Sistem PETA</h2>
-                    <p class="mt-1 text-sm leading-relaxed text-slate-500">Gunakan NIP dan password untuk mengakses tes psikologi pegawai.</p>
+                    <h2 class="text-2xl font-bold text-slate-800 sm:text-[2rem] leading-tight">Masuk ke Sistem PETA</h2>
+                    <p class="mt-1 text-sm leading-relaxed text-slate-500 max-w-xl">Gunakan NIP dan password untuk mengakses tes psikologi pegawai.</p>
+                </div>
+            </div>
+
+            <div class="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">Yang perlu disiapkan</p>
+                        <h3 class="mt-1 text-base font-bold text-slate-800 leading-tight">Pastikan data login dan biodata siap sebelum tes dimulai.</h3>
+                    </div>
+                    <span class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-700 border border-blue-100">Satu akun untuk satu pegawai</span>
+                </div>
+                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div class="rounded-xl bg-slate-50 p-3.5">
+                        <p class="text-sm font-semibold text-slate-800">1. Login dengan NIP aktif</p>
+                        <p class="mt-1 text-[13px] leading-relaxed text-slate-500">Gunakan kredensial yang diberikan admin agar sistem dapat memeriksa status jadwal Anda.</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 p-3.5">
+                        <p class="text-sm font-semibold text-slate-800">2. Simpan progres dengan aman</p>
+                        <p class="mt-1 text-[13px] leading-relaxed text-slate-500">Jawaban direkam per percobaan sehingga hasil setiap tes tetap terpisah.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-5 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 to-sky-50 p-4">
+                <div class="flex items-start gap-3">
+                    <div class="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">i</div>
+                    <div>
+                        <p class="text-sm font-bold text-slate-800">Informasi penting</p>
+                        <p class="mt-1 text-[13px] leading-relaxed text-slate-600">Jika login gagal, pastikan NIP, password, dan status aktivasi tes sudah benar. Bila tes sudah pernah dikerjakan, hasil akan tetap tersimpan sesuai tanggal pengerjaan.</p>
+                    </div>
                 </div>
             </div>
 
