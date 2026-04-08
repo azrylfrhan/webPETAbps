@@ -449,7 +449,85 @@ function getAttemptHistoryGeneric($conn, $test_type, $nip) {
         $attempts[] = $row;
     }
     $stmt->close();
-    return $attempts;
+
+    if (!empty($attempts)) {
+        return $attempts;
+    }
+
+    // Fallback ke legacy tables jika unified table sudah ada tetapi belum berisi data.
+    $legacyAttempts = [];
+    if ($test_type === 'iq' && taf_table_exists($conn, 'iq_results')) {
+        $stmt = $conn->prepare("SELECT id, skor, tanggal FROM iq_results WHERE user_id = ? ORDER BY tanggal DESC, id DESC");
+        $stmt->bind_param('s', $nip);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $counter = 0;
+        while ($row = $result->fetch_assoc()) {
+            $counter++;
+            $legacyAttempts[] = [
+                'attempt_id' => null,
+                'attempt_number' => $counter,
+                'tanggal_mulai' => $row['tanggal'] ?: date('Y-m-d H:i:s'),
+                'tanggal_selesai' => $row['tanggal'] ?: date('Y-m-d H:i:s'),
+                'alasan_tes' => null,
+                'status' => 'finished',
+                'se' => 0, 'wa' => 0, 'an' => 0, 'ge' => 0, 'ra' => 0, 'zr' => 0, 'fa' => 0, 'wu' => 0, 'me' => 0,
+                'skor_total' => (int)($row['skor'] ?? 0)
+            ];
+        }
+        $stmt->close();
+    } elseif ($test_type === 'msdt' && taf_table_exists($conn, 'hasil_msdt')) {
+        $stmt = $conn->prepare("SELECT * FROM hasil_msdt WHERE nip = ? ORDER BY tanggal_tes DESC, id DESC");
+        $stmt->bind_param('s', $nip);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $counter = 0;
+        while ($row = $result->fetch_assoc()) {
+            $counter++;
+            $legacyAttempts[] = [
+                'attempt_id' => null,
+                'attempt_number' => $counter,
+                'tanggal_mulai' => $row['tanggal_tes'] ?: date('Y-m-d H:i:s'),
+                'tanggal_selesai' => $row['tanggal_tes'] ?: date('Y-m-d H:i:s'),
+                'alasan_tes' => null,
+                'status' => 'finished',
+                'Ds' => (int)($row['Ds'] ?? 0), 'Mi' => (int)($row['Mi'] ?? 0), 'Au' => (int)($row['Au'] ?? 0),
+                'Co' => (int)($row['Co'] ?? 0), 'Bu' => (int)($row['Bu'] ?? 0), 'Dv' => (int)($row['Dv'] ?? 0),
+                'Ba' => (int)($row['Ba'] ?? 0), 'E_dim' => (int)($row['E_dim'] ?? 0),
+                'TO_score' => (int)($row['TO_score'] ?? 0), 'RO_score' => (int)($row['RO_score'] ?? 0),
+                'E_score' => (int)($row['E_score'] ?? 0), 'O_score' => (int)($row['O_score'] ?? 0),
+                'dominant_model' => $row['dominant_model'] ?? null
+            ];
+        }
+        $stmt->close();
+    } elseif ($test_type === 'papi' && taf_table_exists($conn, 'hasil_papi')) {
+        $stmt = $conn->prepare("SELECT * FROM hasil_papi WHERE nip = ? ORDER BY tanggal_tes DESC, id DESC");
+        $stmt->bind_param('s', $nip);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $counter = 0;
+        while ($row = $result->fetch_assoc()) {
+            $counter++;
+            $legacyAttempts[] = [
+                'attempt_id' => null,
+                'attempt_number' => $counter,
+                'tanggal_mulai' => $row['tanggal_tes'] ?: date('Y-m-d H:i:s'),
+                'tanggal_selesai' => $row['tanggal_tes'] ?: date('Y-m-d H:i:s'),
+                'alasan_tes' => null,
+                'status' => 'finished',
+                'G' => (int)($row['G'] ?? 0), 'L' => (int)($row['L'] ?? 0), 'I' => (int)($row['I'] ?? 0),
+                'T' => (int)($row['T'] ?? 0), 'V' => (int)($row['V'] ?? 0), 'S' => (int)($row['S'] ?? 0),
+                'R' => (int)($row['R'] ?? 0), 'D' => (int)($row['D'] ?? 0), 'C' => (int)($row['C'] ?? 0),
+                'E' => (int)($row['E'] ?? 0), 'N' => (int)($row['N'] ?? 0), 'A' => (int)($row['A'] ?? 0),
+                'P' => (int)($row['P'] ?? 0), 'X' => (int)($row['X'] ?? 0), 'B' => (int)($row['B'] ?? 0),
+                'O' => (int)($row['O'] ?? 0), 'K' => (int)($row['K'] ?? 0), 'F' => (int)($row['F'] ?? 0),
+                'W' => (int)($row['W'] ?? 0), 'Z' => (int)($row['Z'] ?? 0)
+            ];
+        }
+        $stmt->close();
+    }
+
+    return $legacyAttempts;
 }
 
 /**

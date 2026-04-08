@@ -34,7 +34,10 @@ $hasUnifiedAttempts = false;
 $cekUnifiedAttempts = mysqli_query($conn, "SHOW TABLES LIKE 'test_attempts'");
 $cekIqAttemptResults = mysqli_query($conn, "SHOW TABLES LIKE 'iq_attempt_results'");
 if ($cekUnifiedAttempts && mysqli_num_rows($cekUnifiedAttempts) > 0 && $cekIqAttemptResults && mysqli_num_rows($cekIqAttemptResults) > 0) {
-    $hasUnifiedAttempts = true;
+    $cekUnifiedFinished = mysqli_query($conn, "SELECT 1 FROM test_attempts WHERE test_type = 'iq' AND status = 'finished' LIMIT 1");
+    if ($cekUnifiedFinished && mysqli_num_rows($cekUnifiedFinished) > 0) {
+        $hasUnifiedAttempts = true;
+    }
 }
 
 function hitungIqAttemptRincian($conn, $attemptId) {
