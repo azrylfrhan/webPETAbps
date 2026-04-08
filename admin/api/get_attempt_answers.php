@@ -108,8 +108,18 @@ try {
     } elseif ($test_type === 'papi') {
         $hasAnswerTable = $conn->query("SHOW TABLES LIKE 'papi_attempt_answers'");
         if ($hasAnswerTable && $hasAnswerTable->num_rows > 0) {
-            $stmt = $conn->prepare("\n                SELECT\n                    s.nomor_soal AS question_number,\n                    s.pertanyaan_a AS option_a,\n                    s.pertanyaan_b AS option_b,\n                    pa.jawaban_user,\n                    pa.mapped_dimension\n                FROM soal s\n                LEFT JOIN papi_attempt_answers pa\n                    ON pa.question_no = s.nomor_soal AND pa.attempt_id = ?\n                WHERE s.kode_tes = 'KEPRIBADIAN2'\n                ORDER BY s.nomor_soal ASC\n            ");
-            $stmt->bind_param('i', $attempt_id);
+            $papiTestCode = 'KEPRIBADIAN2';
+            $codeCheckStmt = $conn->prepare("SELECT 1 FROM soal WHERE kode_tes = 'KEPRIBADIAN2' LIMIT 1");
+            $codeCheckStmt->execute();
+            $hasPapi2 = $codeCheckStmt->get_result()->num_rows > 0;
+            $codeCheckStmt->close();
+
+            if (!$hasPapi2) {
+                $papiTestCode = 'KEPRIBADIAN';
+            }
+
+            $stmt = $conn->prepare("\n                SELECT\n                    COALESCE(NULLIF(s.nomor_soal, 0), s.id) AS question_number,\n                    COALESCE(NULLIF(s.pertanyaan_a, ''), '-') AS option_a,\n                    COALESCE(NULLIF(s.pertanyaan_b, ''), '-') AS option_b,\n                    pa.jawaban_user,\n                    pa.mapped_dimension\n                FROM soal s\n                LEFT JOIN papi_attempt_answers pa\n                    ON pa.question_no = COALESCE(NULLIF(s.nomor_soal, 0), s.id) AND pa.attempt_id = ?\n                WHERE s.kode_tes = ?\n                ORDER BY COALESCE(NULLIF(s.nomor_soal, 0), s.id) ASC\n            ");
+            $stmt->bind_param('is', $attempt_id, $papiTestCode);
             $stmt->execute();
             $result = $stmt->get_result();
             while ($row = $result->fetch_assoc()) {
@@ -120,7 +130,7 @@ try {
     } else {
         $hasAnswerTable = $conn->query("SHOW TABLES LIKE 'msdt_attempt_answers'");
         if ($hasAnswerTable && $hasAnswerTable->num_rows > 0) {
-            $stmt = $conn->prepare("\n                SELECT\n                    s.nomor_soal AS question_number,\n                    s.pertanyaan_a AS option_a,\n                    s.pertanyaan_b AS option_b,\n                    ma.jawaban_user\n                FROM soal s\n                LEFT JOIN msdt_attempt_answers ma\n                    ON ma.question_no = s.nomor_soal AND ma.attempt_id = ?\n                WHERE s.kode_tes = 'KEPRIBADIAN'\n                ORDER BY s.nomor_soal ASC\n            ");
+            $stmt = $conn->prepare("\n                SELECT\n                    COALESCE(NULLIF(s.nomor_soal, 0), s.id) AS question_number,\n                    COALESCE(NULLIF(s.pertanyaan_a, ''), '-') AS option_a,\n                    COALESCE(NULLIF(s.pertanyaan_b, ''), '-') AS option_b,\n                    ma.jawaban_user\n                FROM soal s\n                LEFT JOIN msdt_attempt_answers ma\n                    ON ma.question_no = COALESCE(NULLIF(s.nomor_soal, 0), s.id) AND ma.attempt_id = ?\n                WHERE s.kode_tes = 'KEPRIBADIAN'\n                ORDER BY COALESCE(NULLIF(s.nomor_soal, 0), s.id) ASC\n            ");
             $stmt->bind_param('i', $attempt_id);
             $stmt->execute();
             $result = $stmt->get_result();

@@ -314,10 +314,10 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                             <?php if ($attempt['test_type'] === 'iq'): ?>
                                                 <?php if ($isFinished): ?>
                                                     <?php if ($has_attempts_table && !empty($attempt['attempt_id'])): ?>
-                                                        <button type="button" onclick="showAttemptAnswers(<?= (int)$attempt['attempt_id'] ?>, 'iq', 'Percobaan #<?= $attempt['attempt_number'] ?>')"
-                                                                class="inline-flex items-center gap-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                        <a href="lihat_jawaban_tes.php?attempt_id=<?= (int)$attempt['attempt_id'] ?>&test_type=iq&title=<?= urlencode('Percobaan #' . $attempt['attempt_number']) ?>"
+                                                           class="inline-flex items-center gap-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-bold transition-all">
                                                             📊 Lihat Jawaban & Skor
-                                                        </button>
+                                                        </a>
                                                     <?php else: ?>
                                                         <form method="POST" action="set_hasil_iq_context.php" class="inline">
                                                             <input type="hidden" name="nip" value="<?= htmlspecialchars($nip) ?>">
@@ -340,10 +340,10 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                             <?php if ($attempt['test_type'] === 'msdt'): ?>
                                                 <?php if ($isFinished): ?>
                                                     <?php if ($has_attempts_table && !empty($attempt['attempt_id'])): ?>
-                                                        <button type="button" onclick="showAttemptAnswers(<?= (int)$attempt['attempt_id'] ?>, 'msdt', 'Percobaan #<?= $attempt['attempt_number'] ?>')"
-                                                                class="inline-flex items-center gap-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                        <a href="lihat_jawaban_tes.php?attempt_id=<?= (int)$attempt['attempt_id'] ?>&test_type=msdt&title=<?= urlencode('Percobaan #' . $attempt['attempt_number']) ?>"
+                                                           class="inline-flex items-center gap-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-full font-bold transition-all">
                                                             📊 Lihat Jawaban & Skor
-                                                        </button>
+                                                        </a>
                                                     <?php else: ?>
                                                         <form method="POST" action="set_result_context.php" class="inline">
                                                             <input type="hidden" name="target" value="hasil_msdt.php">
@@ -367,10 +367,10 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                             <?php if ($attempt['test_type'] === 'papi'): ?>
                                                 <?php if ($isFinished): ?>
                                                     <?php if ($has_attempts_table && !empty($attempt['attempt_id'])): ?>
-                                                        <button type="button" onclick="showAttemptAnswers(<?= (int)$attempt['attempt_id'] ?>, 'papi', 'Percobaan #<?= $attempt['attempt_number'] ?>')"
-                                                                class="inline-flex items-center gap-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                        <a href="lihat_jawaban_tes.php?attempt_id=<?= (int)$attempt['attempt_id'] ?>&test_type=papi&title=<?= urlencode('Percobaan #' . $attempt['attempt_number']) ?>"
+                                                           class="inline-flex items-center gap-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-full font-bold transition-all">
                                                             📊 Lihat Jawaban & Skor
-                                                        </button>
+                                                        </a>
                                                     <?php else: ?>
                                                         <form method="POST" action="set_result_context.php" class="inline">
                                                             <input type="hidden" name="target" value="hasil_papi.php">
