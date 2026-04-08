@@ -12,7 +12,9 @@ $testTypeParam = strtolower(trim($_GET['test_type'] ?? ''));
 $nipParam = trim((string)($_GET['nip'] ?? ''));
 $title = trim($_GET['title'] ?? 'Detail Jawaban');
 
-if ($attemptId <= 0) {
+$allowLegacyIq = ($attemptId <= 0 && $testTypeParam === 'iq' && $nipParam !== '');
+
+if ($attemptId <= 0 && !$allowLegacyIq) {
     if ($testTypeParam === 'iq' && $nipParam !== '') {
         header('Location: hasil_iq.php?nip=' . urlencode($nipParam));
         exit;
@@ -31,16 +33,48 @@ if ($attemptId <= 0) {
 }
 
 $attempt = null;
-if ($testTypeParam !== '') {
+if ($allowLegacyIq) {
+    $stmt = $conn->prepare("SELECT ta.*, u.nama, u.satuan_kerja, u.jabatan FROM test_attempts ta JOIN users u ON u.nip COLLATE utf8mb4_unicode_ci = ta.nip COLLATE utf8mb4_unicode_ci WHERE ta.nip = ? AND ta.test_type = 'iq' ORDER BY ta.tanggal_mulai DESC, ta.id DESC LIMIT 1");
+    $stmt->bind_param('s', $nipParam);
+    $stmt->execute();
+    $attempt = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if ($attempt) {
+        $attemptId = (int)($attempt['id'] ?? 0);
+    } else {
+        $stmtUser = $conn->prepare("SELECT nip, nama, satuan_kerja, jabatan FROM users WHERE nip = ? LIMIT 1");
+        $stmtUser->bind_param('s', $nipParam);
+        $stmtUser->execute();
+        $userRow = $stmtUser->get_result()->fetch_assoc();
+        $stmtUser->close();
+
+        if ($userRow) {
+            $attempt = [
+                'id' => 0,
+                'nip' => $userRow['nip'],
+                'nama' => $userRow['nama'],
+                'satuan_kerja' => $userRow['satuan_kerja'],
+                'jabatan' => $userRow['jabatan'],
+                'test_type' => 'iq',
+                'attempt_number' => 0,
+                'tanggal_mulai' => null,
+                'status' => 'finished',
+            ];
+        }
+    }
+} elseif ($testTypeParam !== '') {
     $stmt = $conn->prepare("SELECT ta.*, u.nama, u.satuan_kerja, u.jabatan FROM test_attempts ta JOIN users u ON u.nip COLLATE utf8mb4_unicode_ci = ta.nip COLLATE utf8mb4_unicode_ci WHERE ta.id = ? AND ta.test_type = ? LIMIT 1");
     $stmt->bind_param('is', $attemptId, $testTypeParam);
 } else {
     $stmt = $conn->prepare("SELECT ta.*, u.nama, u.satuan_kerja, u.jabatan FROM test_attempts ta JOIN users u ON u.nip COLLATE utf8mb4_unicode_ci = ta.nip COLLATE utf8mb4_unicode_ci WHERE ta.id = ? LIMIT 1");
     $stmt->bind_param('i', $attemptId);
 }
-$stmt->execute();
-$attempt = $stmt->get_result()->fetch_assoc();
-$stmt->close();
+if (!$allowLegacyIq) {
+    $stmt->execute();
+    $attempt = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+}
 
 if (!$attempt) {
     if ($testTypeParam === 'iq' && $nipParam !== '') {

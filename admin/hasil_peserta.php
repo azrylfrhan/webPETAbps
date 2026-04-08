@@ -305,9 +305,9 @@ if (!$resultPegawai) {
                                         📊 Lihat Jawaban & Skor
                                     </a>
                                 <?php else: ?>
-                                    <a href="hasil_iq.php?nip=<?= urlencode($row['nip']); ?>"
+                                    <a href="lihat_jawaban_tes.php?test_type=iq&nip=<?= urlencode($row['nip']); ?>&title=<?= urlencode('Riwayat IQ') ?>"
                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 hover:bg-amber-500 text-amber-700 hover:text-white transition-all">
-                                        📊 Lihat Skor
+                                        📊 Lihat Jawaban & Skor
                                     </a>
                                 <?php endif; ?>
                             <?php else: ?>

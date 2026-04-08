@@ -319,7 +319,10 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                                             📊 Lihat Jawaban & Skor
                                                         </a>
                                                     <?php else: ?>
-                                                        <span class="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-400 px-3 py-1.5 rounded-full font-bold">Riwayat lama</span>
+                                                        <a href="lihat_jawaban_tes.php?test_type=iq&nip=<?= urlencode($nip) ?>&title=<?= urlencode('Riwayat IQ') ?>"
+                                                           class="inline-flex items-center gap-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-bold transition-all">
+                                                            📊 Lihat Jawaban & Skor
+                                                        </a>
                                                     <?php endif; ?>
                                                     <p class="text-[11px] text-slate-500 mt-1">Skor: <?= $scoreIq !== null ? (int)$scoreIq : '-' ?></p>
                                                 <?php else: ?>
