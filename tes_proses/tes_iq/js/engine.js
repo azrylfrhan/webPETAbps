@@ -21,6 +21,142 @@ const IQ_API_BASE = 'api';
 
 const STORAGE_KEY = `peta_progress_${USER.nip}`;
 const IS_RESET_START = new URLSearchParams(window.location.search).get('reset') === '1';
+const LOADER_MIN_VISIBLE_MS = 320;
+
+let loaderShownAt = 0;
+let loaderHideTimer = null;
+let loaderIsVisible = false;
+
+function showTransitionLoader(message = 'Memuat...') {
+    const loader = document.getElementById('transition-loader');
+    const textEl = document.getElementById('transition-loader-text');
+    if (textEl) textEl.textContent = message;
+    if (!loader) return;
+
+    if (loaderHideTimer) {
+        clearTimeout(loaderHideTimer);
+        loaderHideTimer = null;
+    }
+
+    if (!loaderIsVisible) {
+        loaderShownAt = Date.now();
+        loaderIsVisible = true;
+    }
+
+    loader.classList.add('show');
+}
+
+function hideTransitionLoader() {
+    const loader = document.getElementById('transition-loader');
+    if (!loader || !loaderIsVisible) return;
+
+    const elapsed = Date.now() - loaderShownAt;
+    const remaining = Math.max(0, LOADER_MIN_VISIBLE_MS - elapsed);
+
+    if (loaderHideTimer) {
+        clearTimeout(loaderHideTimer);
+    }
+
+    loaderHideTimer = setTimeout(() => {
+        loader.classList.remove('show');
+        loaderIsVisible = false;
+        loaderHideTimer = null;
+    }, remaining);
+}
+
+function renderPreparationScreen() {
+    const viewport = document.getElementById('app-viewport');
+    if (!viewport) return;
+
+    viewport.className = 'bg-grid flex-1 flex items-center justify-center p-6';
+    viewport.innerHTML = `
+        <div class="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
+            <p class="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">Persiapan Tes</p>
+            <h2 class="mt-2 text-2xl font-black text-navy">Menyiapkan Perangkat Tes</h2>
+            <p class="mt-3 text-sm leading-relaxed text-slate-600">
+                Pastikan koneksi internet stabil, perangkat terisi daya, dan Anda siap fokus sampai tes selesai.
+            </p>
+            <div class="mt-5 space-y-2 text-sm text-slate-600">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">1. Tutup aplikasi/tab lain yang tidak diperlukan.</div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">2. Aktifkan mode layar penuh untuk pengalaman tes yang optimal.</div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">3. Setelah mulai, tes tidak bisa diulang dari awal.</div>
+            </div>
+            <button id="btn-start-preparation" type="button" class="mt-6 w-full rounded-2xl bg-navy px-6 py-3 text-sm font-bold text-white transition hover:opacity-90">
+                Saya Siap, Mulai Tes
+            </button>
+        </div>
+    `;
+
+    const startBtn = document.getElementById('btn-start-preparation');
+    if (startBtn) {
+        startBtn.addEventListener('click', async () => {
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            startBtn.textContent = 'Menyiapkan Tes...';
+
+            showTransitionLoader('Menyiapkan Perangkat Tes...');
+            try {
+                await enableFullscreen();
+            } catch (e) {
+                console.warn('Fullscreen request blocked:', e);
+            }
+
+            startSession();
+            initializeTestFlow();
+        });
+    }
+}
+
+function initializeTestFlow() {
+    const saved = loadProgress();
+
+    // Check if this is a fresh start from instruction page (reset=1)
+    if (saved && saved.questionNumber > 0 && !IS_RESET_START) {
+        hideTransitionLoader();
+        showNotification(
+            'Lanjutkan Sesi?',
+            `Anda memiliki sesi tes yang belum selesai di Bagian ${saved.sectionId}, Soal ${saved.questionNumber}.\n\nLanjutkan dari soal terakhir?`,
+            'info',
+            true
+        ).then((resume) => {
+            if (resume) {
+                showTransitionLoader('Memuat progres terakhir...');
+                globalSectionId      = saved.sectionId;
+                globalQuestionNumber = saved.questionNumber;
+                totalQuestions       = saved.totalQuestions;
+                sectionTime          = saved.sectionTime;
+                remainingTime        = saved.remainingTime > 0 ? saved.remainingTime : saved.sectionTime;
+
+                fetch(`${IQ_API_BASE}/get_section.php?id=${globalSectionId}`)
+                    .then(res => res.text())
+                    .then(text => {
+                        let data;
+                        try { data = JSON.parse(text); } catch(e) { loadSection(1); return; }
+                        if (!data.section) { loadSection(1); return; }
+                        document.getElementById("section-title").innerText = data.section.nama_bagian;
+                        sectionQuestionsPromise = loadSectionQuestions(data.section.urutan);
+                        Promise.resolve(sectionQuestionsPromise).finally(() => {
+                            startTimer(remainingTime);
+                            loadQuestion(saved.questionNumber);
+                        });
+                    })
+                    .finally(() => hideTransitionLoader());
+                return;
+            }
+            clearProgress();
+            showTransitionLoader('Menyiapkan bagian pertama...');
+            loadSection(1);
+        });
+        return;
+    }
+
+    if (IS_RESET_START) {
+        clearProgress();
+    }
+
+    showTransitionLoader('Menyiapkan bagian pertama...');
+    loadSection(1);
+}
 
 /* =========================================================
    SAVE & LOAD PROGRESS
@@ -137,50 +273,7 @@ function finishSession() {
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
-    startSession(); // Buat/cek session saat halaman dibuka
-    const saved = loadProgress();
-
-    // Check if this is a fresh start from instruction page (reset=1)
-    if (saved && saved.questionNumber > 0 && !IS_RESET_START) {
-        showNotification(
-            'Lanjutkan Sesi?',
-            `Anda memiliki sesi tes yang belum selesai di Bagian ${saved.sectionId}, Soal ${saved.questionNumber}.\n\nLanjutkan dari soal terakhir?`,
-            'info',
-            true
-        ).then((resume) => {
-            if (resume) {
-                globalSectionId      = saved.sectionId;
-                globalQuestionNumber = saved.questionNumber;
-                totalQuestions       = saved.totalQuestions;
-                sectionTime          = saved.sectionTime;
-                remainingTime        = saved.remainingTime > 0 ? saved.remainingTime : saved.sectionTime;
-
-                fetch(`${IQ_API_BASE}/get_section.php?id=${globalSectionId}`)
-                    .then(res => res.text())
-                    .then(text => {
-                        let data;
-                        try { data = JSON.parse(text); } catch(e) { loadSection(1); return; }
-                        if (!data.section) { loadSection(1); return; }
-                        document.getElementById("section-title").innerText = data.section.nama_bagian;
-                        sectionQuestionsPromise = loadSectionQuestions(data.section.urutan);
-                        Promise.resolve(sectionQuestionsPromise).finally(() => {
-                            startTimer(remainingTime);
-                            loadQuestion(saved.questionNumber);
-                        });
-                    });
-                return;
-            }
-            clearProgress();
-            loadSection(1);
-        });
-        return;
-    }
-
-    if (IS_RESET_START) {
-        clearProgress();
-    }
-
-    loadSection(1);
+    renderPreparationScreen();
 });
 
 /* =========================================================
@@ -188,6 +281,7 @@ document.addEventListener("DOMContentLoaded", () => {
 ========================================================= */
 
 function loadSection(id) {
+    showTransitionLoader('Memuat instruksi bagian...');
     fetch(`${IQ_API_BASE}/get_section.php?id=${id}`)
         .then(res => res.text())
         .then(text => {
@@ -196,6 +290,11 @@ function loadSection(id) {
             catch(e) { console.error("get_section parse error:", text); return; }
 
             if (!data.section) { finishTest(); return; }
+
+            const sectionTitleEl = document.getElementById("section-title");
+            if (sectionTitleEl) {
+                sectionTitleEl.innerText = data.section.nama_bagian || `Bagian ${id}`;
+            }
 
             globalSectionId      = data.section.urutan;
             totalQuestions       = parseInt(data.section.jumlah_soal);
@@ -222,7 +321,8 @@ function loadSection(id) {
                 UI.renderInstruction(data.section, data.example);
             }
         })
-        .catch(err => console.error("Error loading section:", err));
+        .catch(err => console.error("Error loading section:", err))
+        .finally(() => hideTransitionLoader());
 }
 
 function loadSectionQuestions(sectionUrutan) {
@@ -300,6 +400,7 @@ function startExam() {
 ========================================================= */
 
 function loadQuestion(questionNumber = globalQuestionNumber) {
+    showTransitionLoader('Memuat soal...');
     globalQuestionNumber = questionNumber;
     
     // Jika user mencoba melompat ke soal melebihi total soal (ingin lanjut section)
@@ -316,11 +417,13 @@ function loadQuestion(questionNumber = globalQuestionNumber) {
                 globalQuestionNumber = unansweredList[0];
                 // Continue dengan normal fetch flow di bawah
             } else {
+                hideTransitionLoader();
                 return;
             }
         } else {
             // Jika sudah fully answered, boleh lanjut ke section berikutnya
             nextSection();
+            hideTransitionLoader();
             return;
         }
     }
@@ -358,7 +461,8 @@ function loadQuestion(questionNumber = globalQuestionNumber) {
                 answeredCount
             );
         })
-        .catch(err => console.error("Error loading question:", err));
+        .catch(err => console.error("Error loading question:", err))
+        .finally(() => hideTransitionLoader());
 }
 
 function getAnsweredQuestionCount() {
@@ -716,6 +820,7 @@ async function finishCurrentSection() {
 ========================================================= */
 
 function nextSection() {
+    showTransitionLoader('Memuat bagian berikutnya...');
     clearInterval(timerInterval);
     timerInterval = null;
 
@@ -732,7 +837,8 @@ function nextSection() {
 
             loadSection(nextId);
         })
-        .catch(() => finishTest());
+        .catch(() => finishTest())
+        .finally(() => hideTransitionLoader());
 }
 
 /* =========================================================

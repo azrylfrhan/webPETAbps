@@ -46,6 +46,7 @@ document.addEventListener("keydown", function(e) {
 ================================ */
 
 let tesAktif = false; // flag: true saat soal sedang ditampilkan
+let fullscreenRetryAttached = false;
 
 function setTesAktif(aktif) {
     tesAktif = aktif;
@@ -53,6 +54,19 @@ function setTesAktif(aktif) {
         // Dorong state baru agar back button tidak keluar halaman
         history.pushState(null, null, location.href);
         enableFullscreen();
+
+        // Retry fullscreen pada interaksi user berikutnya bila browser menolak auto request.
+        if (!fullscreenRetryAttached) {
+            const retryFullscreen = () => {
+                if (!tesAktif) return;
+                if (!document.fullscreenElement) {
+                    enableFullscreen();
+                }
+            };
+            document.addEventListener('click', retryFullscreen, true);
+            document.addEventListener('keydown', retryFullscreen, true);
+            fullscreenRetryAttached = true;
+        }
     }
 }
 
@@ -70,12 +84,15 @@ window.addEventListener("popstate", function() {
 function enableFullscreen() {
     const elem = document.documentElement;
     if (elem.requestFullscreen) {
-        elem.requestFullscreen();
+        return elem.requestFullscreen().catch(() => false);
     } else if (elem.webkitRequestFullscreen) {
         elem.webkitRequestFullscreen();
+        return Promise.resolve(true);
     } else if (elem.msRequestFullscreen) {
         elem.msRequestFullscreen();
+        return Promise.resolve(true);
     }
+    return Promise.resolve(false);
 }
 
 /* ===============================

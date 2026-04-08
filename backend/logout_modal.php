@@ -51,6 +51,12 @@
 
     cancelBtn.addEventListener('click', closeModal);
 
+    confirmBtn.addEventListener('click', function () {
+        if (typeof window.showGlobalPageLoader === 'function') {
+            window.showGlobalPageLoader('Memproses logout...');
+        }
+    });
+
     modal.addEventListener('click', function (event) {
         if (event.target === modal) closeModal();
     });
@@ -60,3 +66,5 @@
     });
 })();
 </script>
+
+<?php include __DIR__ . '/global_page_loader.php'; ?>

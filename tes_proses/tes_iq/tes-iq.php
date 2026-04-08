@@ -145,6 +145,31 @@ if ($session && $session['status'] === 'finished') {
                 opacity: 1;
             }
         }
+
+        #transition-loader {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 99998;
+            background: rgba(15, 30, 60, 0.42);
+            backdrop-filter: blur(3px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        #transition-loader.show {
+            display: flex;
+        }
+
+        .transition-loader-box {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #c9d7ea;
+            border-radius: 1rem;
+            padding: 1.1rem 1.35rem;
+            min-width: 280px;
+            box-shadow: 0 24px 50px rgba(15, 30, 60, 0.28);
+            text-align: center;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -197,10 +222,18 @@ if ($session && $session['status'] === 'finished') {
         </div>
     </div>
 
+    <div id="transition-loader">
+        <div class="transition-loader-box">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-navy mx-auto mb-3"></div>
+            <p id="transition-loader-text" class="text-sm font-semibold text-slate-700">Menyiapkan Perangkat Tes...</p>
+        </div>
+    </div>
+
     <script>
         const USER = { nip: "<?= $nip ?>", nama: "<?= $nama ?>" };
     </script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <?php include __DIR__ . '/../../backend/global_page_loader.php'; ?>
     <script src="js/security.js?v=<?= $v_security ?>"></script>
     <script src="js/timer.js?v=<?= $v_timer ?>"></script>
     <script src="js/ui.js?v=<?= $v_ui ?>"></script>

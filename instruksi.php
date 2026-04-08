@@ -49,12 +49,12 @@ $nip = $_SESSION['nip'] ?? '-';
 </header>
 
 <main class="bg-grid px-4 py-8 sm:px-6 sm:py-10">
-    <div class="mx-auto w-full max-w-4xl">
+    <div class="mx-auto w-full max-w-6xl">
 
-    <section class="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-[#0f1e3c] via-[#1c3f75] to-[#5b9df3] p-5 text-white shadow-xl sm:p-8">
+    <section class="mb-8 overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-[#0f1e3c] via-[#1c3f75] to-[#5b9df3] p-5 text-white shadow-xl sm:p-8">
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-blue-100">Persiapan Tes</p>
-        <h1 class="mt-3 text-2xl font-extrabold leading-tight sm:text-4xl">Instruksi Tes Psikologi</h1>
-        <p class="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">Baca petunjuk dengan teliti sebelum memulai agar proses pengerjaan berjalan lancar.</p>
+        <h1 class="mt-3 text-2xl font-extrabold leading-tight sm:text-4xl">Instruksi Tes 2</h1>
+        <p class="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">Baca petunjuk dengan teliti, pastikan Anda siap sebelum memulai tes kepribadian.</p>
         <div class="mt-5 inline-flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2 text-sm ring-1 ring-white/25">
             <span class="font-semibold">NIP:</span>
             <span><?= htmlspecialchars($nip); ?></span>
@@ -62,24 +62,42 @@ $nip = $_SESSION['nip'] ?? '-';
     </section>
 
     <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
-        <h2 class="text-2xl font-bold text-slate-800">Panduan Pengerjaan</h2>
+        <div class="mb-8">
+            <h2 class="mb-4 text-2xl font-bold text-slate-800">Cara Mengerjakan</h2>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-6">
+                <ul class="space-y-3 text-slate-700">
+                    <li class="rounded-xl border border-slate-200 bg-white px-4 py-3">Jawablah setiap pertanyaan dengan jujur dan sesuai kondisi Anda saat ini.</li>
+                    <li class="rounded-xl border border-slate-200 bg-white px-4 py-3">Tidak ada jawaban benar atau salah pada tes kepribadian.</li>
+                    <li class="rounded-xl border border-slate-200 bg-white px-4 py-3">Kerjakan tes dalam satu sesi tanpa jeda panjang agar hasil tetap konsisten.</li>
+                    <li class="rounded-xl border border-slate-200 bg-white px-4 py-3">Pastikan koneksi internet stabil selama pengerjaan berlangsung.</li>
+                    <li class="rounded-xl border border-slate-200 bg-white px-4 py-3">Data dan hasil tes bersifat rahasia untuk kebutuhan internal.</li>
+                </ul>
+            </div>
+        </div>
 
-        <p class="mt-4 text-slate-600 leading-relaxed">
-            Tes ini bertujuan untuk memperoleh gambaran umum karakteristik psikologis pegawai dalam konteks kerja.
-        </p>
+        <div class="mb-8">
+            <h2 class="mb-4 text-2xl font-bold text-slate-800">Contoh Pendekatan Jawaban</h2>
+            <div class="rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50 p-6">
+                <p class="text-sm leading-relaxed text-slate-700">
+                    Pilih jawaban yang paling menggambarkan kebiasaan Anda di tempat kerja. Jangan memilih jawaban berdasarkan yang dianggap paling baik,
+                    tetapi pilih yang paling sesuai dengan diri Anda.
+                </p>
+            </div>
+        </div>
 
-        <ul class="mt-5 space-y-3 text-slate-700">
-            <li class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">Jawablah setiap pertanyaan dengan jujur dan sesuai kondisi Anda.</li>
-            <li class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">Tidak ada jawaban benar atau salah pada tes kepribadian.</li>
-            <li class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">Kerjakan tes dalam satu sesi tanpa jeda panjang.</li>
-            <li class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">Pastikan koneksi internet stabil selama pengerjaan.</li>
-            <li class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">Data dan hasil tes bersifat rahasia untuk kebutuhan internal.</li>
-        </ul>
-
-        <div class="mt-6 grid gap-3 sm:grid-cols-3">
-            <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800"><strong>Jumlah Soal:</strong> 60</div>
-            <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800"><strong>Estimasi Waktu:</strong> ±30 menit</div>
-            <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800"><strong>Jenis Skala:</strong> Skala Likert</div>
+        <div class="mb-8 grid gap-4 sm:grid-cols-3">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <p class="text-xs font-bold text-slate-500 uppercase">Jumlah Soal</p>
+                <p class="mt-2 text-2xl font-bold text-navy">60 Soal</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <p class="text-xs font-bold text-slate-500 uppercase">Estimasi Waktu</p>
+                <p class="mt-2 text-2xl font-bold text-navy">±30 Menit</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <p class="text-xs font-bold text-slate-500 uppercase">Skala Jawaban</p>
+                <p class="mt-2 text-lg font-bold text-slate-700">Likert</p>
+            </div>
         </div>
 
         <div class="mt-7 flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">

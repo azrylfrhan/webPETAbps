@@ -197,7 +197,7 @@ if (!$tes1_selesai) {
                     </div>
                 </div>
                 <button class="mt-5 w-full rounded-xl px-4 py-3 text-sm font-bold uppercase tracking-wide text-white transition <?= $tes1_selesai ? 'btn-disabled' : 'bg-blue-600 hover:bg-blue-700' ?>"
-                    onclick="<?= $tes1_selesai ? '' : "window.location.href='$tes1Url'" ?>">
+                    onclick="<?= $tes1_selesai ? '' : "confirmStartTest('" . htmlspecialchars($tes1Url, ENT_QUOTES) . "', 'Tes 1 (IQ)')" ?>">
                     <?= $tes1_selesai ? '✓ Tes Selesai' : 'Mulai Tes 1 →' ?>
                 </button>
             </div>
@@ -240,7 +240,7 @@ if (!$tes1_selesai) {
                         </strong>
                     </div>
                 </div>
-                <button class="mt-5 w-full rounded-xl px-4 py-3 text-sm font-bold uppercase tracking-wide text-white transition <?= $status_kelas2 === 'btn-disabled' ? 'btn-disabled' : 'bg-violet-600 hover:bg-violet-700' ?>" onclick="window.location.href='<?= $url_tes2 ?>'">
+                <button class="mt-5 w-full rounded-xl px-4 py-3 text-sm font-bold uppercase tracking-wide text-white transition <?= $status_kelas2 === 'btn-disabled' ? 'btn-disabled' : 'bg-violet-600 hover:bg-violet-700' ?>" onclick="<?= $status_kelas2 === 'btn-disabled' ? '' : "confirmStartTest('" . htmlspecialchars($url_tes2, ENT_QUOTES) . "', 'Tes 2')" ?>">
                     <?= $label_tes2 ?>
                 </button>
             </div>
@@ -252,8 +252,68 @@ if (!$tes1_selesai) {
         <strong>🔒 Kerahasiaan Data:</strong> Hasil tes bersifat rahasia dan digunakan hanya untuk keperluan internal BPS.
     </section>
 
+    <div id="start-test-modal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/60 p-4">
+        <div class="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <div class="bg-gradient-to-r from-[#0f1e3c] via-[#1c3f75] to-[#5b9df3] px-6 py-5 text-white">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-100">Konfirmasi Mulai Tes</p>
+                <h3 class="mt-2 text-xl font-extrabold" id="start-test-title">Persiapan Tes</h3>
+            </div>
+            <div class="space-y-4 px-6 py-6 text-sm text-slate-600">
+                <p>
+                    Pastikan Anda sudah siap sebelum melanjutkan. Setelah menekan tombol
+                    <strong class="text-slate-900">Lanjut Mulai Tes</strong>, tes tidak bisa diulang atau dihentikan di tengah proses.
+                </p>
+                <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+                    Siapkan jaringan internet yang stabil, waktu pengerjaan yang cukup, dan fokus penuh selama tes berlangsung.
+                </div>
+            </div>
+            <div class="flex flex-col-reverse gap-2 border-t border-slate-100 px-6 py-4 sm:flex-row sm:justify-end">
+                <button type="button" onclick="closeStartTestModal()" class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Batal</button>
+                <button type="button" onclick="proceedStartTest()" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700">Lanjut Mulai Tes</button>
+            </div>
+        </div>
+    </div>
+
     </div>
 </main>
+
+<script>
+    let pendingStartTestUrl = '';
+
+    function confirmStartTest(url, testName) {
+        if (!url || url === '#') return;
+        pendingStartTestUrl = url;
+        const modal = document.getElementById('start-test-modal');
+        const title = document.getElementById('start-test-title');
+        if (title) {
+            title.textContent = `Persiapan ${testName}`;
+        }
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+    }
+
+    function closeStartTestModal() {
+        const modal = document.getElementById('start-test-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        pendingStartTestUrl = '';
+    }
+
+    function proceedStartTest() {
+        if (!pendingStartTestUrl) return;
+        window.location.href = pendingStartTestUrl;
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeStartTestModal();
+        }
+    });
+</script>
 
 <?php include __DIR__ . '/backend/logout_modal.php'; ?>
 
