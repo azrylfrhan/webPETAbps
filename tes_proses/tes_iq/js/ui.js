@@ -8,6 +8,252 @@ const IMG_SEC   = '../../';
 
 let CURRENT_EXAMPLE = null;
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function extractInlineOptions(line) {
+    const matches = [...String(line).matchAll(/([A-E])\.\s*([^A-E]+?)(?=\s+[A-E]\.\s*|$)/g)];
+    return matches
+        .map(match => ({ label: match[1], text: match[2].trim() }))
+        .filter(item => item.label && item.text);
+}
+
+function formatInstructionText(text, sectionUrutan = 0) {
+    const lines = String(text ?? '')
+        .replace(/\r\n/g, '\n')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean);
+
+    const sectionCleanCopy = {
+        1: {
+            intro: 'Pada bagian ini, setiap kalimat memiliki satu kata yang hilang. Anda harus memilih kata yang paling tepat untuk melengkapi kalimat tersebut.',
+            steps: [
+                'Baca kalimat dengan saksama.',
+                'Bandingkan semua pilihan jawaban.',
+                'Pilih kata yang paling sesuai secara makna.',
+                'Setiap soal hanya memiliki satu jawaban benar.'
+            ],
+            exampleTitle: 'Contoh:',
+            exampleQuestion: 'Seekor kuda mempunyai kesamaan terbanyak dengan seekor ...',
+            exampleAnswer: 'Jawaban yang benar: C. keledai.'
+        },
+        2: {
+            intro: 'Pada bagian ini, terdapat lima kata. Empat kata memiliki kesamaan, sedangkan satu kata berbeda sendiri.',
+            steps: [
+                'Temukan empat kata yang sejenis.',
+                'Pilih satu kata yang paling berbeda dari keempat kata lainnya.',
+                'Pastikan pilihan Anda konsisten dengan hubungan antar kata.'
+            ]
+        },
+        3: {
+            intro: 'Pada bagian ini, Anda perlu mencari hubungan antara dua kata pertama, lalu mencocokkannya dengan kata yang tepat pada pilihan jawaban.',
+            steps: [
+                'Perhatikan hubungan kata pertama dan kedua.',
+                'Cari hubungan yang sama pada kata ketiga dan pilihan jawaban.',
+                'Pilih jawaban yang memiliki pola hubungan yang sama.'
+            ]
+        },
+        4: {
+            intro: 'Pada bagian ini, Anda diminta mencari satu kata yang dapat mewakili dua kata yang diberikan.',
+            steps: [
+                'Baca dua kata yang tersedia dengan saksama.',
+                'Temukan kata umum yang mencakup keduanya.',
+                'Tulis atau pilih jawaban yang paling tepat.'
+            ]
+        },
+        5: {
+            intro: 'Pada bagian ini, Anda mengerjakan soal hitungan sederhana.',
+            steps: [
+                'Baca pertanyaan dengan teliti.',
+                'Hitung secara cepat dan cermat.',
+                'Pilih jawaban angka yang benar.'
+            ]
+        },
+        6: {
+            intro: 'Pada bagian ini, Anda diminta melanjutkan pola deret angka.',
+            steps: [
+                'Temukan pola penambahan, pengurangan, atau urutan tertentu.',
+                'Lanjutkan deret sesuai pola tersebut.',
+                'Pilih angka berikutnya yang paling tepat.'
+            ]
+        },
+        7: {
+            intro: 'Pada bagian ini, Anda akan melihat potongan gambar yang harus disusun menjadi bentuk tertentu.',
+            steps: [
+                'Perhatikan tiap potongan gambar.',
+                'Bayangkan potongan tersebut disusun kembali.',
+                'Pilih bentuk yang paling sesuai dengan hasil susunan.'
+            ]
+        },
+        8: {
+            intro: 'Pada bagian ini, Anda akan membandingkan kubus yang dapat diputar atau digulingkan secara mental.',
+            steps: [
+                'Perhatikan tanda pada setiap sisi kubus.',
+                'Bayangkan putaran atau gulingan kubus.',
+                'Pilih kubus yang memiliki susunan tanda yang sama.'
+            ]
+        },
+        9: {
+            intro: 'Pada bagian ini, Anda diminta menghafal daftar kata terlebih dahulu, lalu menjawab pertanyaan setelah waktu hafalan selesai.',
+            steps: [
+                'Gunakan waktu hafalan untuk mengingat kata-kata.',
+                'Perhatikan kategori dan huruf awal kata.',
+                'Saat masuk ke soal, pilih jawaban berdasarkan kata yang dihafal.'
+            ]
+        }
+    };
+
+    const clean = sectionCleanCopy[Number(sectionUrutan)] || null;
+
+    if (clean) {
+        const introCard = `
+            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
+                    <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-700">i</span>
+                    Ringkasannya
+                </div>
+                <p class="mt-3 text-sm leading-relaxed text-slate-700 sm:text-[15px]">${escapeHtml(clean.intro)}</p>
+            </div>`;
+
+        const stepsCard = `
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 shadow-sm">
+                <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Langkah Mengerjakan</p>
+                <ol class="mt-3 space-y-2 text-sm leading-relaxed text-slate-700 sm:text-[15px]">
+                    ${clean.steps.map(step => `<li class="rounded-xl border border-slate-200 bg-white px-3 py-2">${escapeHtml(step)}</li>`).join('')}
+                </ol>
+            </div>`;
+
+        const exampleCards = clean.exampleQuestion ? `
+            <div class="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4 shadow-sm">
+                <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-700">Contoh</p>
+                <div class="mt-3 space-y-2 text-sm leading-relaxed text-slate-700 sm:text-[15px]">
+                    <p>${escapeHtml(clean.exampleQuestion)}</p>
+                    ${clean.exampleAnswer ? `<p class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-800">${escapeHtml(clean.exampleAnswer)}</p>` : ''}
+                </div>
+            </div>` : '';
+
+        return `<div class="space-y-3">${introCard}${stepsCard}${exampleCards}</div>`;
+    }
+
+    if (lines.length === 0) {
+        return `
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">
+                Instruksi belum tersedia.
+            </div>`;
+    }
+
+    const blocks = [];
+    let introLines = [];
+    let exampleMode = false;
+    let answerLine = null;
+
+    const flushIntro = () => {
+        if (introLines.length === 0) return;
+        blocks.push(`
+            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                <p class="text-sm leading-relaxed text-slate-700 sm:text-[15px]">${introLines.map(escapeHtml).join('<br>')}</p>
+            </div>`);
+        introLines = [];
+    };
+
+    const flushAnswer = () => {
+        if (!answerLine) return;
+        blocks.push(`
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-relaxed text-emerald-800">
+                ${escapeHtml(answerLine)}
+            </div>`);
+        answerLine = null;
+    };
+
+    lines.forEach((line) => {
+        if (/^contoh\s*:?.*$/i.test(line)) {
+            flushIntro();
+            flushAnswer();
+            exampleMode = true;
+            blocks.push(`
+                <div class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-blue-700 ring-1 ring-blue-100">
+                    Contoh
+                </div>`);
+            return;
+        }
+
+        if (/^jawaban yang benar/i.test(line) || /^oleh karena itu/i.test(line) || /^jawabannya adalah/i.test(line)) {
+            flushIntro();
+            answerLine = line;
+            return;
+        }
+
+        const options = extractInlineOptions(line);
+        if (options.length >= 2) {
+            flushIntro();
+            flushAnswer();
+            blocks.push(`
+                <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                    <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        ${options.map(option => `
+                            <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                                <span class="font-bold text-navy">${escapeHtml(option.label)}.</span>
+                                <span>${escapeHtml(option.text)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`);
+            return;
+        }
+
+        if (/^[A-E]\.\s*/i.test(line)) {
+            flushIntro();
+            flushAnswer();
+            const parts = line.split(/\s*(?=[A-E]\.)/).map(part => part.trim()).filter(Boolean);
+            const optionCards = parts.map(part => {
+                const match = part.match(/^([A-E])\.\s*(.*)$/i);
+                if (!match) return '';
+                return `
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                        <span class="font-bold text-navy">${escapeHtml(match[1])}.</span>
+                        <span>${escapeHtml(match[2])}</span>
+                    </div>`;
+            }).join('');
+            blocks.push(`
+                <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                    <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        ${optionCards}
+                    </div>
+                </div>`);
+            return;
+        }
+
+        if (exampleMode && !answerLine && introLines.length > 0) {
+            // Setelah contoh dimulai, baris berikutnya tetap masuk ke bagian contoh.
+            introLines.push(line);
+            return;
+        }
+
+        if (line.length > 120) {
+            flushIntro();
+            blocks.push(`
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-relaxed text-slate-700">
+                    ${escapeHtml(line)}
+                </div>`);
+            return;
+        }
+
+        introLines.push(line);
+    });
+
+    flushIntro();
+    flushAnswer();
+
+    return `<div class="space-y-3">${blocks.join('')}</div>`;
+}
+
 const UI = {
 
 /* =========================================================
@@ -21,33 +267,59 @@ renderInstruction(section, example){
     let instrGambar = "";
     if (section.gambar_instruksi) {
         instrGambar = `
-        <div class="mb-4 text-center">
+        <div class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 text-center">
             <img src="${IMG_SEC}${section.gambar_instruksi}"
-                 class="mx-auto rounded-lg max-h-64"
+                 class="mx-auto w-full max-h-[28rem] object-contain p-4"
                  onerror="this.style.display='none'">
         </div>`;
     }
 
     let html = `
-    <div class="min-h-screen bg-grid bg-slate-100 flex items-center justify-center p-6">
-        <div class="bg-white rounded-3xl shadow-xl border border-slate-200 w-full max-w-2xl p-10">
-            <div class="mb-6 rounded-2xl bg-gradient-to-r from-[#0f1e3c] via-[#1b3f74] to-[#5b9df3] px-5 py-4 text-white">
-                <p class="text-[11px] uppercase tracking-[0.2em] text-blue-100">Petunjuk Pengerjaan</p>
-                <h2 class="mt-1 text-2xl font-bold">Instruksi Tes IQ</h2>
-                <div class="mt-3 pt-3 border-t border-blue-400 border-opacity-50">
-                    <p class="text-sm font-semibold text-blue-50">Bagian ${section.urutan}: ${section.nama_bagian}</p>
-                </div>
+    <div class="min-h-screen bg-[#f5f8fd] bg-[radial-gradient(circle_at_top,rgba(15,30,60,0.06),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(91,157,243,0.08),transparent_25%)]">
+        <div class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
+            <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+                <section class="min-w-0">
+                    <div class="rounded-[2rem] border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,30,60,0.08)] overflow-hidden">
+                        <div class="bg-gradient-to-r from-[#0f1e3c] via-[#1b3f74] to-[#5b9df3] px-5 py-5 text-white sm:px-8">
+                            <p class="text-[11px] font-bold uppercase tracking-[0.28em] text-blue-100">Petunjuk Pengerjaan</p>
+                            <h2 class="mt-2 text-2xl font-black sm:text-4xl">Instruksi Tes 1</h2>
+                            <p class="mt-2 text-sm text-blue-100/90 sm:text-base">Bagian ${section.urutan}: ${escapeHtml(section.nama_bagian)}</p>
+                        </div>
+                        <div class="px-5 py-6 sm:px-8 sm:py-8">
+                            <div class="mb-6 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-relaxed text-slate-600 sm:text-[15px]">
+                                ${formatInstructionText(section.instruksi, section.urutan)}
+                            </div>
+                            ${instrGambar}
+                            <button onclick="UI.renderExample()"
+                                class="w-full rounded-2xl bg-navy px-8 py-4 text-base font-bold text-white transition hover:opacity-90 sm:text-lg">
+                                Mulai Kerjakan Soal
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <aside class="min-w-0 lg:sticky lg:top-6 self-start space-y-4">
+                    <div class="rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
+                        <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Ringkasan</p>
+                        <p class="mt-2 text-xl font-black text-slate-900">Bagian ${section.urutan}</p>
+                        <p class="mt-1 text-sm text-slate-500">${escapeHtml(section.nama_bagian)}</p>
+                        <div class="mt-4 grid gap-3">
+                            <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                                <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Arah pengerjaan</p>
+                                <p class="mt-1 text-sm font-medium text-slate-700">Baca instruksi, pahami contoh, lalu lanjut ke tes utama.</p>
+                            </div>
+                            <div class="rounded-2xl bg-blue-50 px-4 py-3">
+                                <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-500">Tujuan</p>
+                                <p class="mt-1 text-sm font-medium text-blue-800">Membantu Anda memahami pola soal sebelum tes dimulai.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
+                        <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Catatan</p>
+                        <p class="mt-2 text-sm leading-relaxed text-slate-500">Jika instruksi terlihat panjang, itu memang sengaja ditata bertahap agar lebih mudah dibaca. Gulir ke bawah untuk tombol mulai.</p>
+                    </div>
+                </aside>
             </div>
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-8">
-                ${instrGambar}
-                <div class="text-slate-600 whitespace-pre-line leading-relaxed">
-                    ${section.instruksi}
-                </div>
-            </div>
-            <button onclick="UI.renderExample()"
-                class="w-full bg-navy text-white px-8 py-3 rounded-xl font-semibold hover:opacity-90 transition">
-                Mulai Kerjakan Soal
-            </button>
         </div>
     </div>`;
 
@@ -161,24 +433,32 @@ renderExample(){
     const hasGambarOpt = hasOptions && example.options.some(o => o.gambar_opsi);
 
     let html = `
-    <div class="min-h-screen bg-grid bg-slate-100 flex items-center justify-center p-6">
-        <div class="bg-white rounded-3xl shadow-xl border border-slate-200 w-full max-w-2xl p-10">
-            <div class="mb-6 rounded-2xl bg-blue-50 border border-blue-100 px-5 py-4">
-                <h2 class="text-xl font-bold text-navy mb-1">Contoh Soal</h2>
-                <p class="text-slate-500 text-sm">Jawab contoh soal berikut sebelum memulai tes.</p>
-            </div>`;
+    <div class="min-h-screen bg-[#f5f8fd] bg-[radial-gradient(circle_at_top,rgba(15,30,60,0.06),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(91,157,243,0.08),transparent_25%)]">
+        <div class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
+            <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+                <section class="min-w-0">
+                    <div class="rounded-[2rem] border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,30,60,0.08)] overflow-hidden">
+                        <div class="bg-gradient-to-r from-[#0f1e3c] via-[#1b3f74] to-[#5b9df3] px-5 py-5 text-white sm:px-8">
+                            <p class="text-[11px] font-bold uppercase tracking-[0.28em] text-blue-100">Contoh Soal</p>
+                            <h2 class="mt-2 text-2xl font-black sm:text-4xl">Latihan Singkat</h2>
+                            <p class="mt-2 text-sm text-blue-100/90 sm:text-base">Jawab contoh soal berikut sebelum memulai tes.</p>
+                        </div>
+                        <div class="px-5 py-6 sm:px-8 sm:py-8">`;
 
     if (example.gambar) {
         html += `
-        <div class="mb-6 text-center">
+        <div class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 text-center">
             <img src="${IMG_SEC}images/img_section/${example.gambar}"
-                 class="mx-auto rounded-lg max-h-64"
+                 class="mx-auto w-full max-h-[28rem] object-contain p-4"
                  onerror="this.style.display='none'">
         </div>`;
     }
 
     if (example.pertanyaan) {
-        html += `<p class="text-slate-700 text-base mb-6 leading-relaxed">${example.pertanyaan}</p>`;
+        html += `
+        <div class="mb-6 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-slate-700 leading-relaxed">
+            ${escapeHtml(example.pertanyaan)}
+        </div>`;
     }
 
     if (hasOptions) {
@@ -218,6 +498,25 @@ renderExample(){
 
     html += `
             <div id="example-feedback" class="hidden mt-6"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <aside class="min-w-0 lg:sticky lg:top-6 self-start space-y-4">
+                    <div class="rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
+                        <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Panduan</p>
+                        <p class="mt-2 text-sm leading-relaxed text-slate-600">Jawab contoh soal dengan benar agar tombol mulai tes aktif.</p>
+                    </div>
+                    <div class="rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
+                        <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Langkah</p>
+                        <ol class="mt-3 space-y-3 text-sm text-slate-600">
+                            <li class="rounded-2xl bg-slate-50 px-4 py-3">1. Baca contoh soal.</li>
+                            <li class="rounded-2xl bg-slate-50 px-4 py-3">2. Pilih jawaban yang menurut Anda benar.</li>
+                            <li class="rounded-2xl bg-slate-50 px-4 py-3">3. Klik tombol mulai tes setelah benar.</li>
+                        </ol>
+                    </div>
+                </aside>
+            </div>
         </div>
     </div>`;
 

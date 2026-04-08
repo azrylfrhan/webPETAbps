@@ -28,12 +28,12 @@ $url_tes2 = "tes-kepribadian.php";
 $label_tes2 = "Mulai Tes 2 →";
 $status_kelas2 = "btn-purple";
 
-$tes1Url = "tes_proses/tes_iq/tes-iq.php";
+$tes1Url = "instruksi_iq.php";
 $tes2Bag1Url = "tes-kepribadian.php";
 $tes2Bag2Url = "tes-kepribadian2.php";
 
-if (is_file(__DIR__ . '/tes_proses/tes_iq/tes-iq.php')) {
-    $tes1Url .= '?v=' . @filemtime(__DIR__ . '/tes_proses/tes_iq/tes-iq.php');
+if (is_file(__DIR__ . '/instruksi_iq.php')) {
+    $tes1Url .= '?v=' . @filemtime(__DIR__ . '/instruksi_iq.php');
 }
 if (is_file(__DIR__ . '/tes-kepribadian.php')) {
     $tes2Bag1Url .= '?v=' . @filemtime(__DIR__ . '/tes-kepribadian.php');

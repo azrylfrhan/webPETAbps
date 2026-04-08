@@ -20,6 +20,7 @@ let sectionTimeExpired = false;
 const IQ_API_BASE = 'api';
 
 const STORAGE_KEY = `peta_progress_${USER.nip}`;
+const IS_RESET_START = new URLSearchParams(window.location.search).get('reset') === '1';
 
 /* =========================================================
    SAVE & LOAD PROGRESS
@@ -139,7 +140,8 @@ document.addEventListener("DOMContentLoaded", () => {
     startSession(); // Buat/cek session saat halaman dibuka
     const saved = loadProgress();
 
-    if (saved && saved.questionNumber > 0) {
+    // Check if this is a fresh start from instruction page (reset=1)
+    if (saved && saved.questionNumber > 0 && !IS_RESET_START) {
         showNotification(
             'Lanjutkan Sesi?',
             `Anda memiliki sesi tes yang belum selesai di Bagian ${saved.sectionId}, Soal ${saved.questionNumber}.\n\nLanjutkan dari soal terakhir?`,
@@ -172,6 +174,10 @@ document.addEventListener("DOMContentLoaded", () => {
             loadSection(1);
         });
         return;
+    }
+
+    if (IS_RESET_START) {
+        clearProgress();
     }
 
     loadSection(1);
@@ -210,6 +216,8 @@ function loadSection(id) {
             // Jika section punya waktu_hafalan, tampilkan halaman hafalan dulu
             if (waktuHafalan > 0) {
                 loadMemoryItems(data.section.id);
+            } else if (IS_RESET_START && data.section.urutan === 1) {
+                startExam();
             } else {
                 UI.renderInstruction(data.section, data.example);
             }

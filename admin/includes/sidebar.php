@@ -45,6 +45,12 @@ $current = basename($_SERVER['PHP_SELF']);
             <span>🧠</span> Kelola Soal
         </a>
 
+        <a href="pengaturan_iq.php"
+           class="relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-[13.5px] font-medium transition-all duration-200
+                  <?= in_array($current, ['pengaturan_iq.php']) ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-900/40' : 'text-slate-400 hover:text-white hover:bg-white/5' ?>">
+            <span>⚙️</span> Pengaturan Tes IQ
+        </a>
+
         <p class="px-4 pt-4 pb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">Pengaturan</p>
 
           <a href="../logout.php" data-logout-url="../logout.php"
