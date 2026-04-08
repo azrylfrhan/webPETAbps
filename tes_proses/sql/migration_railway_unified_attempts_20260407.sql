@@ -24,8 +24,7 @@ CREATE TABLE IF NOT EXISTS test_attempts (
     INDEX idx_nip (nip),
     INDEX idx_test_type (test_type),
     INDEX idx_status (status),
-    UNIQUE KEY unique_attempt (nip, test_type, attempt_number),
-    CONSTRAINT fk_test_attempts_user_nip FOREIGN KEY (nip) REFERENCES users(nip) ON DELETE CASCADE
+    UNIQUE KEY unique_attempt (nip, test_type, attempt_number)
 );
 
 CREATE TABLE IF NOT EXISTS iq_attempt_answers (
@@ -40,7 +39,6 @@ CREATE TABLE IF NOT EXISTS iq_attempt_answers (
     INDEX idx_iq_attempt (attempt_id),
     INDEX idx_iq_user_nip (user_nip),
     CONSTRAINT fk_iq_answers_attempt FOREIGN KEY (attempt_id) REFERENCES test_attempts(id) ON DELETE CASCADE,
-    CONSTRAINT fk_iq_answers_user FOREIGN KEY (user_nip) REFERENCES users(nip) ON DELETE CASCADE,
     CONSTRAINT fk_iq_answers_question FOREIGN KEY (question_id) REFERENCES iq_questions(id) ON DELETE CASCADE
 );
 
@@ -63,8 +61,7 @@ CREATE TABLE IF NOT EXISTS iq_attempt_results (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unique_iq_attempt_result (attempt_id),
     INDEX idx_iq_result_user_nip (user_nip),
-    CONSTRAINT fk_iq_results_attempt FOREIGN KEY (attempt_id) REFERENCES test_attempts(id) ON DELETE CASCADE,
-    CONSTRAINT fk_iq_results_user FOREIGN KEY (user_nip) REFERENCES users(nip) ON DELETE CASCADE
+    CONSTRAINT fk_iq_results_attempt FOREIGN KEY (attempt_id) REFERENCES test_attempts(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS papi_attempt_answers (
@@ -79,8 +76,7 @@ CREATE TABLE IF NOT EXISTS papi_attempt_answers (
     UNIQUE KEY unique_papi_attempt_answer (attempt_id, question_no),
     INDEX idx_papi_attempt (attempt_id),
     INDEX idx_papi_user_nip (user_nip),
-    CONSTRAINT fk_papi_answers_attempt FOREIGN KEY (attempt_id) REFERENCES test_attempts(id) ON DELETE CASCADE,
-    CONSTRAINT fk_papi_answers_user FOREIGN KEY (user_nip) REFERENCES users(nip) ON DELETE CASCADE
+    CONSTRAINT fk_papi_answers_attempt FOREIGN KEY (attempt_id) REFERENCES test_attempts(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS papi_attempt_results (
@@ -112,8 +108,7 @@ CREATE TABLE IF NOT EXISTS papi_attempt_results (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unique_papi_attempt_result (attempt_id),
     INDEX idx_papi_result_user_nip (user_nip),
-    CONSTRAINT fk_papi_results_attempt FOREIGN KEY (attempt_id) REFERENCES test_attempts(id) ON DELETE CASCADE,
-    CONSTRAINT fk_papi_results_user FOREIGN KEY (user_nip) REFERENCES users(nip) ON DELETE CASCADE
+    CONSTRAINT fk_papi_results_attempt FOREIGN KEY (attempt_id) REFERENCES test_attempts(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS msdt_attempt_answers (
@@ -127,8 +122,7 @@ CREATE TABLE IF NOT EXISTS msdt_attempt_answers (
     UNIQUE KEY unique_msdt_attempt_answer (attempt_id, question_no),
     INDEX idx_msdt_attempt (attempt_id),
     INDEX idx_msdt_user_nip (user_nip),
-    CONSTRAINT fk_msdt_answers_attempt FOREIGN KEY (attempt_id) REFERENCES test_attempts(id) ON DELETE CASCADE,
-    CONSTRAINT fk_msdt_answers_user FOREIGN KEY (user_nip) REFERENCES users(nip) ON DELETE CASCADE
+    CONSTRAINT fk_msdt_answers_attempt FOREIGN KEY (attempt_id) REFERENCES test_attempts(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS msdt_attempt_results (
@@ -153,8 +147,7 @@ CREATE TABLE IF NOT EXISTS msdt_attempt_results (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unique_msdt_attempt_result (attempt_id),
     INDEX idx_msdt_result_user_nip (user_nip),
-    CONSTRAINT fk_msdt_results_attempt FOREIGN KEY (attempt_id) REFERENCES test_attempts(id) ON DELETE CASCADE,
-    CONSTRAINT fk_msdt_results_user FOREIGN KEY (user_nip) REFERENCES users(nip) ON DELETE CASCADE
+    CONSTRAINT fk_msdt_results_attempt FOREIGN KEY (attempt_id) REFERENCES test_attempts(id) ON DELETE CASCADE
 );
 
 -- =========================================================
@@ -215,5 +208,79 @@ PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 -- C. OPTIONAL LEGACY SNAPSHOT INTO UNIFIED TABLES
 --      (intentionally omitted here to keep the migration SQL-safe on Railway)
 -- =========================================================
+
+-- =========================================================
+-- D. OPTIONAL FK TO users(nip) IF COMPATIBLE
+--    Railway can have users.nip definition that differs by length/collation.
+--    To avoid hard failure, add FK only when column type/collation match.
+-- =========================================================
+
+SET @users_nip_coltype := (
+    SELECT COLUMN_TYPE
+    FROM information_schema.columns
+    WHERE table_schema = @db_name AND table_name = 'users' AND column_name = 'nip'
+    LIMIT 1
+);
+
+SET @users_nip_charset := (
+    SELECT COALESCE(CHARACTER_SET_NAME, '')
+    FROM information_schema.columns
+    WHERE table_schema = @db_name AND table_name = 'users' AND column_name = 'nip'
+    LIMIT 1
+);
+
+SET @users_nip_collation := (
+    SELECT COALESCE(COLLATION_NAME, '')
+    FROM information_schema.columns
+    WHERE table_schema = @db_name AND table_name = 'users' AND column_name = 'nip'
+    LIMIT 1
+);
+
+SET @attempt_nip_coltype := (
+    SELECT COLUMN_TYPE
+    FROM information_schema.columns
+    WHERE table_schema = @db_name AND table_name = 'test_attempts' AND column_name = 'nip'
+    LIMIT 1
+);
+
+SET @attempt_nip_charset := (
+    SELECT COALESCE(CHARACTER_SET_NAME, '')
+    FROM information_schema.columns
+    WHERE table_schema = @db_name AND table_name = 'test_attempts' AND column_name = 'nip'
+    LIMIT 1
+);
+
+SET @attempt_nip_collation := (
+    SELECT COALESCE(COLLATION_NAME, '')
+    FROM information_schema.columns
+    WHERE table_schema = @db_name AND table_name = 'test_attempts' AND column_name = 'nip'
+    LIMIT 1
+);
+
+SET @fk_exists := (
+    SELECT COUNT(*)
+    FROM information_schema.table_constraints
+    WHERE table_schema = @db_name
+      AND table_name = 'test_attempts'
+      AND constraint_name = 'fk_test_attempts_user_nip'
+      AND constraint_type = 'FOREIGN KEY'
+);
+
+SET @can_add_fk := (
+    CASE
+        WHEN @fk_exists > 0 THEN 0
+        WHEN @users_nip_coltype IS NULL OR @attempt_nip_coltype IS NULL THEN 0
+        WHEN @users_nip_coltype <> @attempt_nip_coltype THEN 0
+        WHEN @users_nip_charset <> @attempt_nip_charset THEN 0
+        WHEN @users_nip_collation <> @attempt_nip_collation THEN 0
+        ELSE 1
+    END
+);
+
+SET @sql := IF(@can_add_fk = 1,
+    'ALTER TABLE test_attempts ADD CONSTRAINT fk_test_attempts_user_nip FOREIGN KEY (nip) REFERENCES users(nip) ON DELETE CASCADE',
+    'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 COMMIT;

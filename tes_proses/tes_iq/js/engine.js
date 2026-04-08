@@ -48,6 +48,70 @@ function clearProgress() {
 }
 
 /* =========================================================
+   NOTIFICATION MODAL SYSTEM
+========================================================= */
+
+function showNotification(title, message, type = 'info', isConfirm = false) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('notification-modal');
+        if (!modal) {
+            console.error('Notification modal not found');
+            resolve(false);
+            return;
+        }
+
+        document.getElementById('notification-title').textContent = title;
+        document.getElementById('notification-message').textContent = message;
+
+        const iconEl = document.getElementById('notification-icon');
+        const iconMap = {
+            success: '✓',
+            error: '✕',
+            info: 'ℹ'
+        };
+        iconEl.textContent = iconMap[type] || '✓';
+        iconEl.className = `notification-icon ${type}`;
+
+        const yesBtn = document.getElementById('notification-yes');
+        const noBtn = document.getElementById('notification-no');
+        const okBtn = document.getElementById('notification-ok');
+
+        if (isConfirm) {
+            okBtn.style.display = 'none';
+            yesBtn.style.display = 'inline-block';
+            noBtn.style.display = 'inline-block';
+        } else {
+            okBtn.style.display = 'inline-block';
+            yesBtn.style.display = 'none';
+            noBtn.style.display = 'none';
+        }
+
+        const newYesBtn = yesBtn.cloneNode(true);
+        const newNoBtn = noBtn.cloneNode(true);
+        const newOkBtn = okBtn.cloneNode(true);
+
+        yesBtn.parentNode.replaceChild(newYesBtn, yesBtn);
+        noBtn.parentNode.replaceChild(newNoBtn, noBtn);
+        okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+
+        newYesBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            resolve(true);
+        });
+        newNoBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            resolve(false);
+        });
+        newOkBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            resolve(true);
+        });
+
+        modal.style.display = 'flex';
+    });
+}
+
+/* =========================================================
    START APP
 ========================================================= */
 
@@ -76,33 +140,38 @@ document.addEventListener("DOMContentLoaded", () => {
     const saved = loadProgress();
 
     if (saved && saved.questionNumber > 0) {
-        const resume = confirm(
-            `Anda memiliki sesi tes yang belum selesai di Bagian ${saved.sectionId}, Soal ${saved.questionNumber}.\n\nLanjutkan dari soal terakhir?`
-        );
-        if (resume) {
-            globalSectionId      = saved.sectionId;
-            globalQuestionNumber = saved.questionNumber;
-            totalQuestions       = saved.totalQuestions;
-            sectionTime          = saved.sectionTime;
-            remainingTime        = saved.remainingTime > 0 ? saved.remainingTime : saved.sectionTime;
+        showNotification(
+            'Lanjutkan Sesi?',
+            `Anda memiliki sesi tes yang belum selesai di Bagian ${saved.sectionId}, Soal ${saved.questionNumber}.\n\nLanjutkan dari soal terakhir?`,
+            'info',
+            true
+        ).then((resume) => {
+            if (resume) {
+                globalSectionId      = saved.sectionId;
+                globalQuestionNumber = saved.questionNumber;
+                totalQuestions       = saved.totalQuestions;
+                sectionTime          = saved.sectionTime;
+                remainingTime        = saved.remainingTime > 0 ? saved.remainingTime : saved.sectionTime;
 
-            fetch(`${IQ_API_BASE}/get_section.php?id=${globalSectionId}`)
-                .then(res => res.text())
-                .then(text => {
-                    let data;
-                    try { data = JSON.parse(text); } catch(e) { loadSection(1); return; }
-                    if (!data.section) { loadSection(1); return; }
-                    document.getElementById("section-title").innerText = data.section.nama_bagian;
-                    sectionQuestionsPromise = loadSectionQuestions(data.section.urutan);
-                    Promise.resolve(sectionQuestionsPromise).finally(() => {
-                        startTimer(remainingTime);
-                        loadQuestion(saved.questionNumber);
+                fetch(`${IQ_API_BASE}/get_section.php?id=${globalSectionId}`)
+                    .then(res => res.text())
+                    .then(text => {
+                        let data;
+                        try { data = JSON.parse(text); } catch(e) { loadSection(1); return; }
+                        if (!data.section) { loadSection(1); return; }
+                        document.getElementById("section-title").innerText = data.section.nama_bagian;
+                        sectionQuestionsPromise = loadSectionQuestions(data.section.urutan);
+                        Promise.resolve(sectionQuestionsPromise).finally(() => {
+                            startTimer(remainingTime);
+                            loadQuestion(saved.questionNumber);
+                        });
                     });
-                });
-            return;
-        } else {
+                return;
+            }
             clearProgress();
-        }
+            loadSection(1);
+        });
+        return;
     }
 
     loadSection(1);
@@ -232,7 +301,7 @@ function loadQuestion(questionNumber = globalQuestionNumber) {
             const unansweredList = Array.from({ length: totalQuestions }, (_, i) => i + 1)
                 .filter(no => !answeredQuestionNumbers.has(no));
             
-            alert(`Semua soal pada bagian ini harus dijawab terlebih dahulu.\n\nSoal yang belum dijawab:\n${unansweredList.join(', ')}`);
+            showNotification('Soal Belum Lengkap', `Soal yang belum dijawab:\n${unansweredList.join(', ')}`, 'error');
             
             // Redirect ke soal pertama yang belum dijawab (non-recursive)
             if (unansweredList.length > 0) {
@@ -468,7 +537,7 @@ async function persistCurrentOpenAnswer() {
 async function goToQuestion(questionNumber) {
     // Hanya bisa navigasi ke soal pertama atau soal yang sudah "touched"
     if (questionNumber !== 1 && !touchedQuestionNumbers.has(questionNumber)) {
-        alert("Anda hanya bisa memilih soal yang sudah dijawab atau di-skip.");
+        await showNotification('Akses Terbatas', 'Anda hanya bisa memilih soal yang sudah dijawab atau di-skip.', 'error');
         return;
     }
     
@@ -491,12 +560,17 @@ async function skipQuestion() {
     // Jika soal saat ini belum dijawab, minta konfirmasi
     const isCurrentAnswered = answeredQuestionNumbers.has(globalQuestionNumber);
     if (!isCurrentAnswered) {
-        const confirmSkip = confirm(
-            `Soal nomor ${globalQuestionNumber} belum dijawab.\n\nLanjut ke soal berikutnya tanpa menjawab?`
-        );
-        if (!confirmSkip) {
-            return;
-        }
+        showNotification(
+            'Konfirmasi Skip',
+            `Soal nomor ${globalQuestionNumber} belum dijawab.\n\nLanjut ke soal berikutnya tanpa menjawab?`,
+            'info',
+            true
+        ).then((confirmSkip) => {
+            if (confirmSkip) {
+                nextQuestion();
+            }
+        });
+        return;
     }
     
     nextQuestion();
@@ -527,7 +601,7 @@ async function nextQuestionOrSection() {
     const isCurrentAnswered = answeredQuestionNumbers.has(globalQuestionNumber);
     
     if (!isCurrentAnswered) {
-        alert("Soal ini harus dijawab sebelum melanjut.");
+        await showNotification('Soal Belum Dijawab', 'Soal ini harus dijawab sebelum melanjut.', 'error');
         return;
     }
     
@@ -612,15 +686,21 @@ async function finishCurrentSection() {
     }
 
     if (!isSectionFullyAnswered()) {
-        alert("Semua soal pada bagian ini harus dijawab dulu sebelum lanjut.");
+        await showNotification('Bagian Belum Lengkap', 'Semua soal pada bagian ini harus dijawab dulu sebelum lanjut.', 'error');
         return;
     }
 
     await persistCurrentOpenAnswer();
-    const proceed = confirm("Lanjut ke bagian berikutnya? Soal yang belum dijawab akan tetap kosong.");
-    if (proceed) {
-        nextSection();
-    }
+    showNotification(
+        'Lanjut Bagian',
+        'Lanjut ke bagian berikutnya? Soal yang belum dijawab akan tetap kosong.',
+        'info',
+        true
+    ).then((proceed) => {
+        if (proceed) {
+            nextSection();
+        }
+    });
 }
 
 /* =========================================================

@@ -275,6 +275,22 @@ $page_end_row = $total > 0 ? ($offset + $rows_count) : 0;
         .badge-gray{background:#f1f5f9;color:#64748b;}
         .badge-amber{background:#fef3c7;color:#92400e;}
         #action-bar{transition:all .2s ease;}
+        #notification-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99999; align-items: center; justify-content: center; }
+        #notification-modal.show { display: flex; }
+        .notification-box { background: white; border-radius: 16px; padding: 32px; max-width: 480px; width: 90%; box-shadow: 0 20px 50px rgba(15,30,60,0.3); animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .notification-icon { width: 56px; height: 56px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin: 0 auto 16px; }
+        .notification-icon.success { background: #dcfce7; color: #16a34a; }
+        .notification-icon.error { background: #fee2e2; color: #dc2626; }
+        .notification-icon.info { background: #dbeafe; color: #2563eb; }
+        .notification-title { font-size: 18px; font-weight: 700; color: #0f172a; margin: 12px 0 8px; text-align: center; }
+        .notification-message { font-size: 14px; color: #64748b; text-align: center; margin-bottom: 24px; line-height: 1.5; white-space: pre-wrap; }
+        .notification-buttons { display: flex; gap: 12px; justify-content: center; }
+        .notification-btn { padding: 10px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .notification-btn.primary { background: #0f1e3c; color: white; }
+        .notification-btn.primary:hover { opacity: 0.9; }
+        .notification-btn.secondary { background: #e2e8f0; color: #64748b; }
+        .notification-btn.secondary:hover { background: #cbd5e1; }
     </style>
 </head>
 <body class="bg-slate-100 flex min-h-screen">
@@ -629,11 +645,12 @@ function clearAll() {
     updBar();
 }
 
-function doBulk(action) {
+async function doBulk(action) {
     const n = document.querySelectorAll('.cb:checked').length;
     const lbl = {aktifkan:'mengaktifkan',nonaktifkan:'menonaktifkan',reset_iq:'mereset Tes IQ',reset_msdt:'mereset Tes Kepribadian Bagian 2',reset_papi:'mereset Tes Kepribadian Bagian 1'};
 
-    if (!confirm(`Yakin ${lbl[action]} ${n} pegawai terpilih?\nTindakan ini tidak bisa dibatalkan.`)) return;
+    const confirmed = await showNotification('Konfirmasi Aksi', `Yakin ${lbl[action]} ${n} pegawai terpilih?\nTindakan ini tidak bisa dibatalkan.`, 'info', true);
+    if (!confirmed) return;
     document.getElementById('at').value = action;
     document.getElementById('bf').submit();
 }
@@ -655,6 +672,82 @@ document.addEventListener('keydown', e => {
 });
 
 syncSelectAllState();
+
+// Notification Modal Function
+function showNotification(title, message, type = 'info', isConfirm = false) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('notification-modal');
+        if (!modal) {
+            console.error('Notification modal not found');
+            resolve(false);
+            return;
+        }
+
+        document.getElementById('notification-title').textContent = title;
+        document.getElementById('notification-message').textContent = message;
+
+        const iconEl = document.getElementById('notification-icon');
+        const iconMap = { success: '✓', error: '✕', info: 'ℹ' };
+        iconEl.textContent = iconMap[type] || '✓';
+        const bgColorMap = { success: '#dcfce7', error: '#fee2e2', info: '#dbeafe' };
+        const textColorMap = { success: '#16a34a', error: '#dc2626', info: '#2563eb' };
+        iconEl.style.background = bgColorMap[type] || '#dbeafe';
+        iconEl.style.color = textColorMap[type] || '#2563eb';
+
+        const yesBtn = document.getElementById('notification-yes');
+        const noBtn = document.getElementById('notification-no');
+        const okBtn = document.getElementById('notification-ok');
+
+        if (isConfirm) {
+            okBtn.style.display = 'none';
+            yesBtn.style.display = 'inline-block';
+            noBtn.style.display = 'inline-block';
+        } else {
+            okBtn.style.display = 'inline-block';
+            yesBtn.style.display = 'none';
+            noBtn.style.display = 'none';
+        }
+
+        const newYesBtn = yesBtn.cloneNode(true);
+        const newNoBtn = noBtn.cloneNode(true);
+        const newOkBtn = okBtn.cloneNode(true);
+
+        yesBtn.parentNode.replaceChild(newYesBtn, yesBtn);
+        noBtn.parentNode.replaceChild(newNoBtn, noBtn);
+        okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+
+        newYesBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            resolve(true);
+        });
+        newNoBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            resolve(false);
+        });
+        newOkBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            resolve(true);
+        });
+
+        modal.style.display = 'flex';
+    });
+}
+
 </script>
+
+<!-- Notification Modal -->
+<div id="notification-modal">
+    <div class="notification-box">
+        <div id="notification-icon" class="notification-icon" style="background: #dbeafe; color: #2563eb;">ℹ</div>
+        <h2 id="notification-title" class="notification-title">Judul</h2>
+        <p id="notification-message" class="notification-message">Pesan</p>
+        <div class="notification-buttons">
+            <button id="notification-ok" type="button" class="notification-btn primary">OK</button>
+            <button id="notification-yes" type="button" class="notification-btn primary" style="display: none;">Ya</button>
+            <button id="notification-no" type="button" class="notification-btn secondary" style="display: none;">Tidak</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

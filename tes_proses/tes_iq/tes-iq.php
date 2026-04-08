@@ -43,6 +43,108 @@ if ($session && $session['status'] === 'finished') {
             background-image: radial-gradient(circle at 1px 1px, rgba(15, 30, 60, 0.07) 1px, transparent 0);
             background-size: 22px 22px;
         }
+
+        /* Tailwind-based Notification Modal */
+        #notification-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification-box {
+            background-color: white;
+            border-radius: 0.75rem;
+            max-width: 480px;
+            width: 90%;
+            padding: 2rem;
+            box-shadow: 0 20px 50px rgba(15, 30, 60, 0.15);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .notification-icon {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            margin: 0 auto;
+        }
+
+        .notification-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #0f1e3c;
+            text-align: center;
+        }
+
+        .notification-message {
+            font-size: 1rem;
+            color: #475569;
+            text-align: center;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .notification-buttons {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .notification-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+        }
+
+        .notification-btn.primary {
+            background-color: #0f1e3c;
+            color: white;
+        }
+
+        .notification-btn.primary:hover {
+            background-color: #1a2d4d;
+            opacity: 0.9;
+        }
+
+        .notification-btn.secondary {
+            background-color: #e2e8f0;
+            color: #475569;
+        }
+
+        .notification-btn.secondary:hover {
+            background-color: #cbd5e1;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -80,6 +182,20 @@ if ($session && $session['status'] === 'finished') {
             <p class="mt-4 text-slate-500 font-semibold">Menyiapkan Perangkat Tes...</p>
         </div>
     </main>
+
+    <!-- Notification Modal -->
+    <div id="notification-modal">
+        <div class="notification-box">
+            <div id="notification-icon" class="notification-icon bg-blue-100"></div>
+            <h2 id="notification-title" class="notification-title">Judul</h2>
+            <p id="notification-message" class="notification-message">Pesan</p>
+            <div class="notification-buttons">
+                <button id="notification-ok" type="button" class="notification-btn primary">OK</button>
+                <button id="notification-yes" type="button" class="notification-btn primary" style="display: none;">Ya</button>
+                <button id="notification-no" type="button" class="notification-btn secondary" style="display: none;">Tidak</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const USER = { nip: "<?= $nip ?>", nama: "<?= $nama ?>" };

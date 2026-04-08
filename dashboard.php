@@ -28,17 +28,33 @@ $url_tes2 = "tes-kepribadian.php";
 $label_tes2 = "Mulai Tes 2 →";
 $status_kelas2 = "btn-purple";
 
+$tes1Url = "tes_proses/tes_iq/tes-iq.php";
+$tes2Bag1Url = "tes-kepribadian.php";
+$tes2Bag2Url = "tes-kepribadian2.php";
+
+if (is_file(__DIR__ . '/tes_proses/tes_iq/tes-iq.php')) {
+    $tes1Url .= '?v=' . @filemtime(__DIR__ . '/tes_proses/tes_iq/tes-iq.php');
+}
+if (is_file(__DIR__ . '/tes-kepribadian.php')) {
+    $tes2Bag1Url .= '?v=' . @filemtime(__DIR__ . '/tes-kepribadian.php');
+}
+if (is_file(__DIR__ . '/tes-kepribadian2.php')) {
+    $tes2Bag2Url .= '?v=' . @filemtime(__DIR__ . '/tes-kepribadian2.php');
+}
+
 if (!$tes1_selesai) {
     $url_tes2 = "#";
     $label_tes2 = "🔒 Selesaikan Tes 1 Dulu";
     $status_kelas2 = "btn-disabled";
 } elseif ($sudah_bagian1 && !$sudah_bagian2) {
-    $url_tes2 = "tes-kepribadian2.php";
+    $url_tes2 = $tes2Bag2Url;
     $label_tes2 = "Lanjut ke Bagian 2 →";
 } elseif ($sudah_bagian1 && $sudah_bagian2) {
     $url_tes2 = "#";
     $label_tes2 = "✓ Tes Selesai";
     $status_kelas2 = "btn-disabled";
+} else {
+    $url_tes2 = $tes2Bag1Url;
 }
 ?>
 
@@ -181,7 +197,7 @@ if (!$tes1_selesai) {
                     </div>
                 </div>
                 <button class="mt-5 w-full rounded-xl px-4 py-3 text-sm font-bold uppercase tracking-wide text-white transition <?= $tes1_selesai ? 'btn-disabled' : 'bg-blue-600 hover:bg-blue-700' ?>"
-                    onclick="<?= $tes1_selesai ? '' : "window.location.href='tes_proses/tes_iq/tes-iq.php'" ?>">
+                    onclick="<?= $tes1_selesai ? '' : "window.location.href='$tes1Url'" ?>">
                     <?= $tes1_selesai ? '✓ Tes Selesai' : 'Mulai Tes 1 →' ?>
                 </button>
             </div>

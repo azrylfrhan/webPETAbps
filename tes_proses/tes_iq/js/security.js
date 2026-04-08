@@ -34,6 +34,10 @@ document.addEventListener("keydown", function(e) {
     if (e.ctrlKey && ["u","s","p"].includes(e.key.toLowerCase())) { e.preventDefault(); return false; }
     // Ctrl+Shift+I / Ctrl+Shift+J (devtools)
     if (e.ctrlKey && e.shiftKey && ["i","j"].includes(e.key.toLowerCase())) { e.preventDefault(); return false; }
+    // Screenshot shortcuts (best effort, tidak didukung konsisten di semua browser/OS)
+    if (e.key === "PrintScreen") { e.preventDefault(); return false; }
+    if (e.metaKey && e.shiftKey && ["3", "4", "5"].includes(e.key)) { e.preventDefault(); return false; }
+    if (e.ctrlKey && e.shiftKey && ["s", "c"].includes(e.key.toLowerCase())) { e.preventDefault(); return false; }
 });
 
 /* ===============================
@@ -48,6 +52,7 @@ function setTesAktif(aktif) {
     if (aktif) {
         // Dorong state baru agar back button tidak keluar halaman
         history.pushState(null, null, location.href);
+        enableFullscreen();
     }
 }
 
@@ -75,19 +80,5 @@ function enableFullscreen() {
 
 /* ===============================
    DETECT EXIT FULLSCREEN
-   Hanya paksa fullscreen saat tes aktif
+   Dibiarkan kosong: mode privasi sudah dihapus
 ================================ */
-
-document.addEventListener("fullscreenchange", () => {
-    if (tesAktif && !document.fullscreenElement) {
-        alert("Tes harus dalam mode fullscreen. Klik OK untuk melanjutkan.");
-        enableFullscreen();
-    }
-});
-
-document.addEventListener("webkitfullscreenchange", () => {
-    if (tesAktif && !document.webkitFullscreenElement) {
-        alert("Tes harus dalam mode fullscreen. Klik OK untuk melanjutkan.");
-        enableFullscreen();
-    }
-});

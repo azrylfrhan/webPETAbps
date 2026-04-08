@@ -3,6 +3,10 @@ require_once 'backend/auth_check.php';
 require_once 'backend/config.php';
 require_once 'backend/test_attempt_functions.php';
 
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 $nip  = $_SESSION['nip'] ?? '-';
 $nama = $_SESSION['nama'] ?? 'User';
 
@@ -58,8 +62,7 @@ define('WAKTU_DETIK', 45 * 60); // 45 menit
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; }
         .bg-navy { background-color: #0f1e3c; }
         .text-navy { color: #0f1e3c; }
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .hover\:border-navy:hover { border-color: #0f1e3c; }
         input[type="radio"] { accent-color: #1a2b5e; width: 16px; height: 16px; flex-shrink: 0; }
         .timer-warning { color: #dc2626 !important; animation: pulse 1s infinite; }
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.6; } }
@@ -101,29 +104,99 @@ define('WAKTU_DETIK', 45 * 60); // 45 menit
             50%  { box-shadow: 0 0 0 8px rgba(220,38,38,0); border-color: #ef4444; }
             100% { box-shadow: none; border-color: #e2e8f0; }
         }
+        /* ── Alert Modal ── */
+        #notification-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        #notification-modal.show { display: flex; }
+        .notification-box {
+            background: #fff;
+            border-radius: 1rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            max-width: 480px;
+            width: 100%;
+            padding: 2rem;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .notification-icon {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .notification-icon.success { background: #dcfce7; color: #15803d; }
+        .notification-icon.error { background: #fee2e2; color: #b91c1c; }
+        .notification-icon.info { background: #dbeafe; color: #0369a1; }
+        .notification-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+        .notification-message {
+            font-size: 0.875rem;
+            color: #64748b;
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+            white-space: pre-wrap;
+        }
+        .notification-buttons {
+            display: flex;
+            gap: 0.75rem;
+        }
+        .notification-btn {
+            flex: 1;
+            padding: 0.625rem 1rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .notification-btn.primary {
+            background: #0f1e3c;
+            color: #fff;
+        }
+        .notification-btn.primary:hover { background: #1b3f74; }
+        .notification-btn.secondary {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+        .notification-btn.secondary:hover { background: #cbd5e1; }
+
     </style>
 </head>
 <body class="min-h-screen overflow-x-hidden flex flex-col">
 
     <!-- HEADER -->
     <header class="bg-navy sticky top-0 z-50 shadow-md">
-        <div class="max-w-6xl mx-auto px-4 py-3 sm:px-6 sm:h-16 sm:py-0 flex items-center justify-between gap-3">
+        <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <img src="images/logobps.png" alt="Logo BPS" class="h-9 sm:h-10">
+                <img src="images/logobps.png" alt="Logo BPS" class="h-10">
                 <div>
-                    <p class="text-white font-extrabold text-xs sm:text-sm uppercase tracking-wide leading-tight">Tes 2 — Bagian 2</p>
-                    <p class="hidden text-blue-200 text-xs font-semibold uppercase tracking-widest sm:block">PETA — Pemetaan Potensi Pegawai</p>
+                    <p class="text-white font-extrabold text-sm uppercase tracking-wide leading-tight">Tes 2 — Bagian 2</p>
+                    <p class="text-blue-200 text-xs font-semibold uppercase tracking-widest">PETA — Pemetaan Potensi Pegawai</p>
                 </div>
             </div>
-            <div class="flex items-center gap-2 sm:gap-4">
-                <div class="text-right">
-                    <p class="text-white font-bold text-sm leading-tight"><?= htmlspecialchars($nama) ?></p>
-                    <p class="hidden text-blue-200 text-xs sm:block"><?= htmlspecialchars($nip) ?></p>
-                </div>
-                <div id="timer-box" class="hidden bg-white/10 border border-white/20 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-center">
-                    <p class="text-[9px] font-black text-blue-200 uppercase tracking-widest">Sisa Waktu</p>
-                    <p id="timer-display" class="text-lg sm:text-xl font-black text-white font-mono">45:00</p>
-                </div>
+            <div class="text-right">
+                <p class="text-white font-bold text-sm leading-tight"><?= htmlspecialchars($nama) ?></p>
+                <p class="text-blue-200 text-xs"><?= htmlspecialchars($nip) ?></p>
             </div>
         </div>
     </header>
@@ -133,12 +206,22 @@ define('WAKTU_DETIK', 45 * 60); // 45 menit
         <div id="progress-bar" class="bg-navy h-full transition-all duration-500" style="width:0%"></div>
     </div>
 
-    <main class="bg-grid flex-1 p-4 sm:p-6">
+    <div id="timer-box" class="hidden bg-white border-b border-slate-200 shadow-sm">
+        <div class="max-w-6xl mx-auto px-6 py-2 flex items-center justify-end gap-3">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Sisa Waktu</span>
+            <span id="timer-display" class="text-2xl font-black text-navy font-mono tracking-tight">45:00</span>
+        </div>
+    </div>
+
+    <main class="bg-grid flex-1 p-6">
 
         <!-- INSTRUKSI -->
         <section id="instruction-section" class="flex items-center justify-center min-h-[calc(100vh-5rem)]">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 w-full max-w-2xl p-6 sm:p-10 fade-in">
-                <h2 class="text-2xl font-bold text-navy mb-6">Instruksi Tes</h2>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 w-full max-w-2xl p-6 sm:p-10">
+                <div class="mb-6 rounded-2xl bg-gradient-to-r from-[#0f1e3c] via-[#1b3f74] to-[#5b9df3] px-5 py-4 text-white">
+                    <p class="text-[11px] uppercase tracking-[0.2em] text-blue-100">Petunjuk Pengerjaan</p>
+                    <h2 class="mt-1 text-2xl font-bold">Instruksi Tes 2 Bagian 2</h2>
+                </div>
                 <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 text-slate-600 leading-relaxed mb-6 space-y-3">
                     <p>Pilihlah satu pernyataan yang paling mencerminkan diri Anda dalam situasi kerja.</p>
                     <p>Anda diminta untuk memilih pernyataan <strong>A</strong> atau <strong>B</strong> yang paling sesuai dengan kondisi dan kepribadian Anda.</p>
@@ -148,14 +231,14 @@ define('WAKTU_DETIK', 45 * 60); // 45 menit
                     <p class="text-blue-700 text-sm font-semibold">Waktu pengerjaan: <strong>45 menit</strong>. Timer mulai saat Anda klik tombol di bawah.</p>
                 </div>
                 <button type="button" id="start-test-btn"
-                    class="w-full sm:w-auto bg-navy text-white px-8 py-3 rounded-xl font-semibold hover:opacity-90 transition">
+                    class="w-full bg-navy text-white px-8 py-3 rounded-xl font-semibold hover:opacity-90 transition">
                     Mulai Kerjakan Soal
                 </button>
             </div>
         </section>
 
         <!-- SOAL -->
-        <section id="questions-section" class="hidden max-w-2xl mx-auto fade-in">
+        <section id="questions-section" class="hidden max-w-2xl mx-auto">
             <form action="tes_proses/proses_simpan_papi.php" method="POST" id="form-soal">
 
                 <div class="flex justify-between items-center mb-3 mt-2">
@@ -183,9 +266,9 @@ define('WAKTU_DETIK', 45 * 60); // 45 menit
                 </div>
                 <?php endforeach; ?>
 
-                <div class="flex justify-center mt-4 mb-16">
+                <div class="mt-4 mb-16">
                     <button type="button" id="btn-submit"
-                        class="bg-navy text-white px-10 py-3 rounded-xl font-semibold hover:opacity-90 transition">
+                        class="w-full bg-navy text-white px-10 py-3 rounded-xl font-semibold hover:opacity-90 transition">
                         Kirim Jawaban Bagian 2
                     </button>
                 </div>
@@ -194,6 +277,25 @@ define('WAKTU_DETIK', 45 * 60); // 45 menit
         </section>
 
     </main>
+
+    <!-- ══════════════════════════════════════════
+         MODAL — Notifikasi (Alert/Confirm)
+    ══════════════════════════════════════════ -->
+    <div id="notification-modal" role="dialog" aria-modal="true">
+        <div class="notification-box">
+            <div class="notification-icon" id="notification-icon">ℹ️</div>
+            <div class="notification-title" id="notification-title">Pesan</div>
+            <div class="notification-message" id="notification-message">Pesan notifikasi</div>
+            <div class="notification-buttons">
+                <button type="button" class="notification-btn secondary" id="notification-btn-cancel" style="display:none;">
+                    Batal
+                </button>
+                <button type="button" class="notification-btn primary" id="notification-btn-ok">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- ══════════════════════════════════════════
          MODAL — Soal Belum Dijawab
@@ -231,17 +333,100 @@ define('WAKTU_DETIK', 45 * 60); // 45 menit
         const TOTAL_SOAL  = <?= $total ?>;
         const WAKTU_DETIK = <?= WAKTU_DETIK ?>;
         const STORAGE_KEY = 'peta_tes2b2_timer_<?= $nip ?>_v45m';
-
         const NOMOR_SOAL_LIST = <?= json_encode(array_column($all_soal, 'nomor_soal')) ?>;
 
         let timerInterval = null;
         let autoSubmit    = false;
+        let tesAktif = false;
+
+        // ── NOTIFICATION MODAL ──
+        function showNotification(title, message, type = 'info', isConfirm = false) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('notification-modal');
+                const icon = document.getElementById('notification-icon');
+                const titleEl = document.getElementById('notification-title');
+                const msgEl = document.getElementById('notification-message');
+                const btnOk = document.getElementById('notification-btn-ok');
+                const btnCancel = document.getElementById('notification-btn-cancel');
+
+                titleEl.textContent = title;
+                msgEl.textContent = message;
+
+                // Set icon
+                if (type === 'success') {
+                    icon.className = 'notification-icon success';
+                    icon.textContent = '✓';
+                } else if (type === 'error') {
+                    icon.className = 'notification-icon error';
+                    icon.textContent = '✕';
+                } else {
+                    icon.className = 'notification-icon info';
+                    icon.textContent = 'ℹ';
+                }
+
+                // Set button visibility
+                if (isConfirm) {
+                    btnCancel.style.display = '';
+                    btnOk.textContent = 'Ya';
+                } else {
+                    btnCancel.style.display = 'none';
+                    btnOk.textContent = 'OK';
+                }
+
+                // Clear old listeners
+                const newOk = btnOk.cloneNode(true);
+                const newCancel = btnCancel.cloneNode(true);
+                btnOk.parentNode.replaceChild(newOk, btnOk);
+                btnCancel.parentNode.replaceChild(newCancel, btnCancel);
+
+                document.getElementById('notification-btn-ok').addEventListener('click', () => {
+                    modal.classList.remove('show');
+                    resolve(true);
+                });
+
+                document.getElementById('notification-btn-cancel').addEventListener('click', () => {
+                    modal.classList.remove('show');
+                    resolve(false);
+                });
+
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.remove('show');
+                        resolve(false);
+                    }
+                }, { once: true });
+
+                modal.classList.add('show');
+            });
+        }
+
+        function enableFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) elem.requestFullscreen();
+            else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+            else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+        }
+
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('copy', e => e.preventDefault());
+        document.addEventListener('paste', e => e.preventDefault());
+        document.addEventListener('cut', e => e.preventDefault());
+        document.addEventListener('keydown', function(e) {
+            const key = String(e.key || '').toLowerCase();
+            if (e.key === 'F12') { e.preventDefault(); return false; }
+            if (e.ctrlKey && ['u', 's', 'p'].includes(key)) { e.preventDefault(); return false; }
+            if (e.ctrlKey && e.shiftKey && ['i', 'j', 'c', 's'].includes(key)) { e.preventDefault(); return false; }
+            if (e.key === 'PrintScreen') { e.preventDefault(); return false; }
+            if (e.metaKey && e.shiftKey && ['3', '4', '5'].includes(e.key)) { e.preventDefault(); return false; }
+        });
 
         document.getElementById('start-test-btn').addEventListener('click', function () {
             document.getElementById('instruction-section').style.display = 'none';
             document.getElementById('questions-section').classList.remove('hidden');
             document.getElementById('timer-box').classList.remove('hidden');
             window.scrollTo(0, 0);
+            tesAktif = true;
+            enableFullscreen();
             startTimer();
         });
 
@@ -286,11 +471,13 @@ define('WAKTU_DETIK', 45 * 60); // 45 menit
             const belum = getNomorBelumDijawab();
 
             if (belum.length === 0) {
-                if (confirm('Kirim jawaban sekarang? Pastikan semua soal telah terisi.')) {
-                    localStorage.removeItem(STORAGE_KEY);
-                    clearInterval(timerInterval);
-                    document.getElementById('form-soal').submit();
-                }
+                showNotification('Konfirmasi', 'Kirim jawaban sekarang? Pastikan semua soal telah terisi.', 'info', true).then((confirmed) => {
+                    if (confirmed) {
+                        localStorage.removeItem(STORAGE_KEY);
+                        clearInterval(timerInterval);
+                        document.getElementById('form-soal').submit();
+                    }
+                });
                 return;
             }
 
@@ -342,12 +529,14 @@ define('WAKTU_DETIK', 45 * 60); // 45 menit
         });
 
         document.getElementById('modal-force-submit-btn').addEventListener('click', function () {
-            if (confirm('Yakin ingin mengirim jawaban meskipun ada soal yang belum diisi?')) {
-                tutupModal();
-                localStorage.removeItem(STORAGE_KEY);
-                clearInterval(timerInterval);
-                document.getElementById('form-soal').submit();
-            }
+            showNotification('Konfirmasi', 'Yakin ingin mengirim jawaban meskipun ada soal yang belum diisi?', 'error', true).then((confirmed) => {
+                if (confirmed) {
+                    tutupModal();
+                    localStorage.removeItem(STORAGE_KEY);
+                    clearInterval(timerInterval);
+                    document.getElementById('form-soal').submit();
+                }
+            });
         });
 
         document.getElementById('form-soal').addEventListener('submit', function() {
