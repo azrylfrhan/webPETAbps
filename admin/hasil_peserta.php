@@ -299,13 +299,10 @@ if (!$resultPegawai) {
 
                         <td class="px-4 py-3.5 border-b border-slate-100 text-center">
                             <?php if($row['test_type'] === 'iq'): ?>
-                                <form method="POST" action="set_hasil_iq_context.php" class="inline">
-                                    <input type="hidden" name="attempt_id" value="<?= (int)$row['attempt_id']; ?>">
-                                    <input type="hidden" name="nip" value="<?= htmlspecialchars($row['nip']); ?>">
-                                    <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 hover:bg-amber-500 text-amber-700 hover:text-white transition-all">
-                                        📊 Lihat Jawaban & Skor
-                                    </button>
-                                </form>
+                                <a href="lihat_jawaban_tes.php?attempt_id=<?= (int)$row['attempt_id']; ?>&test_type=iq&title=<?= urlencode('Percobaan #' . (int)$row['attempt_number']); ?>"
+                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 hover:bg-amber-500 text-amber-700 hover:text-white transition-all">
+                                    📊 Lihat Jawaban & Skor
+                                </a>
                             <?php else: ?>
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-400">
                                     Belum Ada
@@ -315,13 +312,10 @@ if (!$resultPegawai) {
 
                         <td class="px-4 py-3.5 border-b border-slate-100 text-center">
                             <?php if($row['test_type'] === 'msdt'): ?>
-                                <form method="POST" action="set_result_context.php" class="inline">
-                                    <input type="hidden" name="target" value="hasil_msdt.php">
-                                    <input type="hidden" name="nip" value="<?= htmlspecialchars($row['nip']); ?>">
-                                    <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-100 hover:bg-blue-500 text-blue-700 hover:text-white transition-all">
-                                        📊 Lihat Jawaban & Skor
-                                    </button>
-                                </form>
+                                <a href="lihat_jawaban_tes.php?attempt_id=<?= (int)$row['attempt_id']; ?>&test_type=msdt&title=<?= urlencode('Percobaan #' . (int)$row['attempt_number']); ?>"
+                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-100 hover:bg-blue-500 text-blue-700 hover:text-white transition-all">
+                                    📊 Lihat Jawaban & Skor
+                                </a>
                             <?php else: ?>
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-400">
                                     Belum Ada
@@ -331,13 +325,10 @@ if (!$resultPegawai) {
 
                         <td class="px-4 py-3.5 border-b border-slate-100 text-center">
                             <?php if($row['test_type'] === 'papi'): ?>
-                                <form method="POST" action="set_result_context.php" class="inline">
-                                    <input type="hidden" name="target" value="hasil_papi.php">
-                                    <input type="hidden" name="nip" value="<?= htmlspecialchars($row['nip']); ?>">
-                                    <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-100 hover:bg-violet-500 text-violet-700 hover:text-white transition-all">
-                                        📊 Lihat Jawaban & Skor
-                                    </button>
-                                </form>
+                                <a href="lihat_jawaban_tes.php?attempt_id=<?= (int)$row['attempt_id']; ?>&test_type=papi&title=<?= urlencode('Percobaan #' . (int)$row['attempt_number']); ?>"
+                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-100 hover:bg-violet-500 text-violet-700 hover:text-white transition-all">
+                                    📊 Lihat Jawaban & Skor
+                                </a>
                             <?php else: ?>
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-400">
                                     Belum Ada

@@ -313,18 +313,13 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                         <td class="px-4 py-4 text-center">
                                             <?php if ($attempt['test_type'] === 'iq'): ?>
                                                 <?php if ($isFinished): ?>
-                                                    <?php if ($has_attempts_table && !empty($attempt['attempt_id'])): ?>
+                                                    <?php if (!empty($attempt['attempt_id'])): ?>
                                                         <a href="lihat_jawaban_tes.php?attempt_id=<?= (int)$attempt['attempt_id'] ?>&test_type=iq&title=<?= urlencode('Percobaan #' . $attempt['attempt_number']) ?>"
                                                            class="inline-flex items-center gap-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-bold transition-all">
                                                             📊 Lihat Jawaban & Skor
                                                         </a>
                                                     <?php else: ?>
-                                                        <form method="POST" action="set_hasil_iq_context.php" class="inline">
-                                                            <input type="hidden" name="nip" value="<?= htmlspecialchars($nip) ?>">
-                                                            <button type="submit" class="inline-flex items-center gap-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-bold transition-all">
-                                                                📊 Lihat Jawaban & Skor
-                                                            </button>
-                                                        </form>
+                                                        <span class="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-400 px-3 py-1.5 rounded-full font-bold">Riwayat lama</span>
                                                     <?php endif; ?>
                                                     <p class="text-[11px] text-slate-500 mt-1">Skor: <?= $scoreIq !== null ? (int)$scoreIq : '-' ?></p>
                                                 <?php else: ?>
@@ -339,19 +334,13 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                         <td class="px-4 py-4 text-center">
                                             <?php if ($attempt['test_type'] === 'msdt'): ?>
                                                 <?php if ($isFinished): ?>
-                                                    <?php if ($has_attempts_table && !empty($attempt['attempt_id'])): ?>
+                                                    <?php if (!empty($attempt['attempt_id'])): ?>
                                                         <a href="lihat_jawaban_tes.php?attempt_id=<?= (int)$attempt['attempt_id'] ?>&test_type=msdt&title=<?= urlencode('Percobaan #' . $attempt['attempt_number']) ?>"
                                                            class="inline-flex items-center gap-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-full font-bold transition-all">
                                                             📊 Lihat Jawaban & Skor
                                                         </a>
                                                     <?php else: ?>
-                                                        <form method="POST" action="set_result_context.php" class="inline">
-                                                            <input type="hidden" name="target" value="hasil_msdt.php">
-                                                            <input type="hidden" name="nip" value="<?= htmlspecialchars($nip) ?>">
-                                                            <button type="submit" class="inline-flex items-center gap-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-full font-bold transition-all">
-                                                                📊 Lihat Jawaban & Skor
-                                                            </button>
-                                                        </form>
+                                                        <span class="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-400 px-3 py-1.5 rounded-full font-bold">Riwayat lama</span>
                                                     <?php endif; ?>
                                                     <p class="text-[11px] text-slate-500 mt-1">TO: <?= $scoreMsdt !== null ? (int)$scoreMsdt : '-' ?></p>
                                                 <?php else: ?>
@@ -366,19 +355,13 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                         <td class="px-4 py-4 text-center">
                                             <?php if ($attempt['test_type'] === 'papi'): ?>
                                                 <?php if ($isFinished): ?>
-                                                    <?php if ($has_attempts_table && !empty($attempt['attempt_id'])): ?>
+                                                    <?php if (!empty($attempt['attempt_id'])): ?>
                                                         <a href="lihat_jawaban_tes.php?attempt_id=<?= (int)$attempt['attempt_id'] ?>&test_type=papi&title=<?= urlencode('Percobaan #' . $attempt['attempt_number']) ?>"
                                                            class="inline-flex items-center gap-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-full font-bold transition-all">
                                                             📊 Lihat Jawaban & Skor
                                                         </a>
                                                     <?php else: ?>
-                                                        <form method="POST" action="set_result_context.php" class="inline">
-                                                            <input type="hidden" name="target" value="hasil_papi.php">
-                                                            <input type="hidden" name="nip" value="<?= htmlspecialchars($nip) ?>">
-                                                            <button type="submit" class="inline-flex items-center gap-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-full font-bold transition-all">
-                                                                📊 Lihat Jawaban & Skor
-                                                            </button>
-                                                        </form>
+                                                        <span class="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-400 px-3 py-1.5 rounded-full font-bold">Riwayat lama</span>
                                                     <?php endif; ?>
                                                     <p class="text-[11px] text-slate-500 mt-1">Total: <?= $scorePapi !== null ? (int)$scorePapi : '-' ?></p>
                                                 <?php else: ?>
