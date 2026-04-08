@@ -8,7 +8,10 @@ $count_pegawai = (int)(mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) a
 $has_unified_attempts = false;
 $check_unified = mysqli_query($conn, "SHOW TABLES LIKE 'test_attempts'");
 if ($check_unified && mysqli_num_rows($check_unified) > 0) {
-    $has_unified_attempts = true;
+    $check_unified_data = mysqli_query($conn, "SELECT 1 FROM test_attempts WHERE status='finished' LIMIT 1");
+    if ($check_unified_data && mysqli_num_rows($check_unified_data) > 0) {
+        $has_unified_attempts = true;
+    }
 }
 
 if ($has_unified_attempts) {

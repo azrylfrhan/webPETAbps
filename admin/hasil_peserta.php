@@ -23,7 +23,10 @@ if ($page < 1) {
 $hasUnifiedAttempts = false;
 $checkUnified = mysqli_query($conn, "SHOW TABLES LIKE 'test_attempts'");
 if ($checkUnified && mysqli_num_rows($checkUnified) > 0) {
-    $hasUnifiedAttempts = true;
+    $checkUnifiedData = mysqli_query($conn, "SELECT 1 FROM test_attempts WHERE status='finished' LIMIT 1");
+    if ($checkUnifiedData && mysqli_num_rows($checkUnifiedData) > 0) {
+        $hasUnifiedAttempts = true;
+    }
 }
 
 $countQueryLegacy = "
