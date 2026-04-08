@@ -314,7 +314,7 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                             <?php if ($attempt['test_type'] === 'iq'): ?>
                                                 <?php if ($isFinished): ?>
                                                     <?php if (!empty($attempt['attempt_id'])): ?>
-                                                        <a href="lihat_jawaban_tes.php?attempt_id=<?= (int)$attempt['attempt_id'] ?>&test_type=iq&title=<?= urlencode('Percobaan #' . $attempt['attempt_number']) ?>"
+                                                        <a href="lihat_jawaban_tes.php?attempt_id=<?= (int)$attempt['attempt_id'] ?>&test_type=iq&nip=<?= urlencode($nip) ?>&title=<?= urlencode('Percobaan #' . $attempt['attempt_number']) ?>"
                                                            class="inline-flex items-center gap-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-bold transition-all">
                                                             📊 Lihat Jawaban & Skor
                                                         </a>
@@ -335,7 +335,7 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                             <?php if ($attempt['test_type'] === 'msdt'): ?>
                                                 <?php if ($isFinished): ?>
                                                     <?php if (!empty($attempt['attempt_id'])): ?>
-                                                        <a href="lihat_jawaban_tes.php?attempt_id=<?= (int)$attempt['attempt_id'] ?>&test_type=msdt&title=<?= urlencode('Percobaan #' . $attempt['attempt_number']) ?>"
+                                                        <a href="hasil_msdt.php?nip=<?= urlencode($nip) ?>"
                                                            class="inline-flex items-center gap-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-full font-bold transition-all">
                                                             📊 Lihat Jawaban & Skor
                                                         </a>
@@ -356,7 +356,7 @@ if ($cek_unified && mysqli_num_rows($cek_unified) > 0) {
                                             <?php if ($attempt['test_type'] === 'papi'): ?>
                                                 <?php if ($isFinished): ?>
                                                     <?php if (!empty($attempt['attempt_id'])): ?>
-                                                        <a href="lihat_jawaban_tes.php?attempt_id=<?= (int)$attempt['attempt_id'] ?>&test_type=papi&title=<?= urlencode('Percobaan #' . $attempt['attempt_number']) ?>"
+                                                        <a href="hasil_papi.php?nip=<?= urlencode($nip) ?>"
                                                            class="inline-flex items-center gap-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-full font-bold transition-all">
                                                             📊 Lihat Jawaban & Skor
                                                         </a>

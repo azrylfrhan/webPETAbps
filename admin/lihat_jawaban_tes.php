@@ -9,10 +9,25 @@ if (($_SESSION['role'] ?? '') !== 'admin') {
 
 $attemptId = isset($_GET['attempt_id']) ? (int)$_GET['attempt_id'] : 0;
 $testTypeParam = strtolower(trim($_GET['test_type'] ?? ''));
+$nipParam = trim((string)($_GET['nip'] ?? ''));
 $title = trim($_GET['title'] ?? 'Detail Jawaban');
 
 if ($attemptId <= 0) {
-    die('Attempt ID tidak valid.');
+    if ($testTypeParam === 'iq' && $nipParam !== '') {
+        header('Location: hasil_iq.php?nip=' . urlencode($nipParam));
+        exit;
+    }
+    if ($testTypeParam === 'msdt' && $nipParam !== '') {
+        header('Location: hasil_msdt.php?nip=' . urlencode($nipParam));
+        exit;
+    }
+    if ($testTypeParam === 'papi' && $nipParam !== '') {
+        header('Location: hasil_papi.php?nip=' . urlencode($nipParam));
+        exit;
+    }
+
+    header('Location: hasil_peserta.php');
+    exit;
 }
 
 $attempt = null;
@@ -28,7 +43,21 @@ $attempt = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 if (!$attempt) {
-    die('Attempt tidak ditemukan.');
+    if ($testTypeParam === 'iq' && $nipParam !== '') {
+        header('Location: hasil_iq.php?nip=' . urlencode($nipParam));
+        exit;
+    }
+    if ($testTypeParam === 'msdt' && $nipParam !== '') {
+        header('Location: hasil_msdt.php?nip=' . urlencode($nipParam));
+        exit;
+    }
+    if ($testTypeParam === 'papi' && $nipParam !== '') {
+        header('Location: hasil_papi.php?nip=' . urlencode($nipParam));
+        exit;
+    }
+
+    header('Location: hasil_peserta.php');
+    exit;
 }
 
 $testType = strtolower($attempt['test_type']);
