@@ -19,7 +19,7 @@ if ($has_unified_attempts) {
     $last_activity = mysqli_query($conn, "
         SELECT u.nama, UPPER(ta.test_type) as jenis, ta.tanggal_mulai AS tanggal_tes, ta.attempt_number
         FROM test_attempts ta
-        JOIN users u ON u.nip = ta.nip
+        JOIN users u ON u.nip COLLATE utf8mb4_unicode_ci = ta.nip COLLATE utf8mb4_unicode_ci
         WHERE ta.status='finished' AND u.role='peserta'
         ORDER BY ta.tanggal_mulai DESC, ta.id DESC
         LIMIT 8
@@ -30,11 +30,11 @@ if ($has_unified_attempts) {
     $count_iq = (int)(mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM iq_results"))['total'] ?? 0);
 
     $last_activity = mysqli_query($conn, "
-        SELECT u.nama, 'MSDT' as jenis, h.tanggal_tes, 1 AS attempt_number FROM hasil_msdt h JOIN users u ON h.nip = u.nip
+        SELECT u.nama, 'MSDT' as jenis, h.tanggal_tes, 1 AS attempt_number FROM hasil_msdt h JOIN users u ON h.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
         UNION ALL
-        SELECT u.nama, 'PAPI' as jenis, h.tanggal_tes, 1 AS attempt_number FROM hasil_papi h JOIN users u ON h.nip = u.nip
+        SELECT u.nama, 'PAPI' as jenis, h.tanggal_tes, 1 AS attempt_number FROM hasil_papi h JOIN users u ON h.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
         UNION ALL
-        SELECT u.nama, 'IQ' as jenis, h.tanggal AS tanggal_tes, 1 AS attempt_number FROM iq_results h JOIN users u ON h.user_id = u.nip
+        SELECT u.nama, 'IQ' as jenis, h.tanggal AS tanggal_tes, 1 AS attempt_number FROM iq_results h JOIN users u ON h.user_id COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
         ORDER BY tanggal_tes DESC LIMIT 8
     ");
 }

@@ -15,7 +15,7 @@ if ($nip_filter === '' && !empty($context['target']) && $context['target'] === '
 if ($nip_filter !== '') {
     $stmt = $conn->prepare("SELECT u.nama, u.satuan_kerja, h.* 
               FROM hasil_papi h 
-              JOIN users u ON h.nip = u.nip
+              JOIN users u ON h.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
               WHERE u.role = 'peserta' AND u.nip = ?
               LIMIT 1");
     $stmt->bind_param('s', $nip_filter);
@@ -24,7 +24,7 @@ if ($nip_filter !== '') {
 } else {
     $query = "SELECT u.nama, u.satuan_kerja, h.* 
               FROM hasil_papi h 
-              JOIN users u ON h.nip = u.nip
+              JOIN users u ON h.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
               WHERE u.role = 'peserta'
               ORDER BY u.nama ASC";
     $result = mysqli_query($conn, $query);

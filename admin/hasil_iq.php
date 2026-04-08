@@ -92,7 +92,7 @@ function hitungIqAttemptRincian($conn, $attemptId) {
 }
 
 function fetchIqAttemptById($conn, $attemptId) {
-    $stmt = $conn->prepare("\n        SELECT\n            ta.id AS attempt_id,\n            ta.nip,\n            u.nama,\n            u.satuan_kerja,\n            ta.attempt_number,\n            ta.tanggal_mulai,\n            ta.tanggal_selesai,\n            COALESCE(r.se, 0) AS se,\n            COALESCE(r.wa, 0) AS wa,\n            COALESCE(r.an, 0) AS an,\n            COALESCE(r.ge, 0) AS ge,\n            COALESCE(r.ra, 0) AS ra,\n            COALESCE(r.zr, 0) AS zr,\n            COALESCE(r.fa, 0) AS fa,\n            COALESCE(r.wu, 0) AS wu,\n            COALESCE(r.me, 0) AS me,\n            COALESCE(r.skor_total, 0) AS skor_total\n        FROM test_attempts ta\n        JOIN users u ON u.nip = ta.nip\n        LEFT JOIN iq_attempt_results r ON r.attempt_id = ta.id\n        WHERE ta.id = ? AND ta.test_type = 'iq' AND ta.status = 'finished'\n        LIMIT 1\n    ");
+    $stmt = $conn->prepare("\n        SELECT\n            ta.id AS attempt_id,\n            ta.nip,\n            u.nama,\n            u.satuan_kerja,\n            ta.attempt_number,\n            ta.tanggal_mulai,\n            ta.tanggal_selesai,\n            COALESCE(r.se, 0) AS se,\n            COALESCE(r.wa, 0) AS wa,\n            COALESCE(r.an, 0) AS an,\n            COALESCE(r.ge, 0) AS ge,\n            COALESCE(r.ra, 0) AS ra,\n            COALESCE(r.zr, 0) AS zr,\n            COALESCE(r.fa, 0) AS fa,\n            COALESCE(r.wu, 0) AS wu,\n            COALESCE(r.me, 0) AS me,\n            COALESCE(r.skor_total, 0) AS skor_total\n        FROM test_attempts ta\n        JOIN users u ON u.nip COLLATE utf8mb4_unicode_ci = ta.nip COLLATE utf8mb4_unicode_ci\n        LEFT JOIN iq_attempt_results r ON r.attempt_id = ta.id\n        WHERE ta.id = ? AND ta.test_type = 'iq' AND ta.status = 'finished'\n        LIMIT 1\n    ");
     $stmt->bind_param('i', $attemptId);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
@@ -149,7 +149,7 @@ if ($hasUnifiedAttempts) {
                 COALESCE(r.me, 0) AS me,
                 COALESCE(r.skor_total, 0) AS skor_total
             FROM test_attempts ta
-            JOIN users u ON u.nip = ta.nip
+            JOIN users u ON u.nip COLLATE utf8mb4_unicode_ci = ta.nip COLLATE utf8mb4_unicode_ci
             LEFT JOIN iq_attempt_results r ON r.attempt_id = ta.id
             WHERE u.role = 'peserta' AND ta.test_type = 'iq' AND ta.status = 'finished' AND ta.nip = ?
             ORDER BY ta.tanggal_mulai DESC, ta.id DESC
@@ -179,7 +179,7 @@ if ($hasUnifiedAttempts) {
                 COALESCE(r.me, 0) AS me,
                 COALESCE(r.skor_total, 0) AS skor_total
             FROM test_attempts ta
-            JOIN users u ON u.nip = ta.nip
+            JOIN users u ON u.nip COLLATE utf8mb4_unicode_ci = ta.nip COLLATE utf8mb4_unicode_ci
             LEFT JOIN iq_attempt_results r ON r.attempt_id = ta.id
             WHERE u.role = 'peserta' AND ta.test_type = 'iq' AND ta.status = 'finished'
             ORDER BY ta.tanggal_mulai DESC, ta.id DESC
@@ -193,7 +193,7 @@ if ($hasUnifiedAttempts) {
         $query_users = "
             SELECT u.nama, u.nip, u.satuan_kerja, r.tanggal
             FROM users u
-            JOIN iq_results r ON u.nip = r.user_id
+            JOIN iq_results r ON u.nip COLLATE utf8mb4_unicode_ci = r.user_id COLLATE utf8mb4_unicode_ci
             WHERE u.role = 'peserta' AND u.nip = ?
             LIMIT 1
         ";
@@ -205,7 +205,7 @@ if ($hasUnifiedAttempts) {
         $query_users = "
             SELECT u.nama, u.nip, u.satuan_kerja, r.tanggal
             FROM users u
-            JOIN iq_results r ON u.nip = r.user_id
+            JOIN iq_results r ON u.nip COLLATE utf8mb4_unicode_ci = r.user_id COLLATE utf8mb4_unicode_ci
             WHERE u.role = 'peserta'
             ORDER BY u.nama ASC
         ";

@@ -14,7 +14,7 @@ $select_usia = $has_biodata ? "TIMESTAMPDIFF(YEAR, b.tanggal_lahir, CURDATE()) A
 $select_tempat_lahir = $has_biodata ? "b.tempat_lahir" : "NULL AS tempat_lahir";
 $select_tanggal_lahir = $has_biodata ? "b.tanggal_lahir" : "NULL AS tanggal_lahir";
 $select_email = $has_biodata ? "b.email" : "NULL AS email";
-$join_biodata = $has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "";
+$join_biodata = $has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci" : "";
 
 $sql = "SELECT u.*, $select_usia, $select_tempat_lahir, $select_tanggal_lahir, $select_email
         FROM users u

@@ -22,8 +22,8 @@ $sql = "
            " . ($has_biodata ? "TIMESTAMPDIFF(YEAR, b.tanggal_lahir, CURDATE())" : "NULL") . " AS usia,
         u.jabatan, u.satuan_kerja, r.tanggal
     FROM users u
-    JOIN iq_results r ON u.nip = r.user_id
-    " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+    JOIN iq_results r ON u.nip COLLATE utf8mb4_unicode_ci = r.user_id COLLATE utf8mb4_unicode_ci
+    " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci" : "") . "
     WHERE u.role = 'peserta' $where_date
     ORDER BY u.nama ASC
 ";
@@ -82,7 +82,7 @@ if ($has_unified) {
             FROM test_attempts ta
             WHERE ta.test_type = 'iq' AND ta.status = 'finished' $where_attempt_date
             GROUP BY ta.nip
-        ) latest ON latest.nip = u.nip
+        ) latest ON latest.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
         JOIN test_attempts ta ON ta.id = latest.picked_id
         LEFT JOIN iq_attempt_results iar ON iar.attempt_id = ta.id
         LEFT JOIN (
@@ -128,8 +128,8 @@ if ($has_unified) {
             JOIN iq_questions q ON q.id = ua.question_id
             JOIN iq_sections s ON s.id = q.section_id
             GROUP BY ua.user_nip
-        ) usercalc ON usercalc.user_nip = ta.nip
-        " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+        ) usercalc ON usercalc.user_nip COLLATE utf8mb4_unicode_ci = ta.nip COLLATE utf8mb4_unicode_ci
+        " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci" : "") . "
         WHERE u.role = 'peserta'
         ORDER BY u.nama ASC
     ";
@@ -144,8 +144,8 @@ if ($has_unified) {
                " . ($has_biodata ? "TIMESTAMPDIFF(YEAR, b.tanggal_lahir, CURDATE())" : "NULL") . " AS usia,
             u.jabatan, u.satuan_kerja, r.tanggal
         FROM users u
-        JOIN iq_results r ON u.nip = r.user_id
-        " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+        JOIN iq_results r ON u.nip COLLATE utf8mb4_unicode_ci = r.user_id COLLATE utf8mb4_unicode_ci
+        " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci" : "") . "
         WHERE u.role = 'peserta' $where_date
         ORDER BY u.nama ASC
     ";

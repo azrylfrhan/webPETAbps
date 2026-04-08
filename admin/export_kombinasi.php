@@ -102,7 +102,7 @@ if ($has_unified) {
         papi.Z,
         papi.tanggal_mulai AS papi_tanggal
     FROM users u
-    " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+    " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci" : "") . "
 
     LEFT JOIN (
         SELECT ta.nip, ta.tanggal_mulai,
@@ -169,7 +169,7 @@ if ($has_unified) {
             JOIN iq_sections s ON s.id = q.section_id
             GROUP BY ua.user_nip
         ) usercalc ON usercalc.user_nip = ta.nip
-    ) iq ON iq.nip = u.nip
+    ) iq ON iq.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
 
     LEFT JOIN (
         SELECT ta.nip, ta.tanggal_mulai,
@@ -188,7 +188,7 @@ if ($has_unified) {
             GROUP BY ta.nip
         ) latest ON latest.picked_id = ta.id
         LEFT JOIN msdt_attempt_results mar ON mar.attempt_id = ta.id
-    ) msdt ON msdt.nip = u.nip
+    ) msdt ON msdt.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
 
     LEFT JOIN (
         SELECT ta.nip, ta.tanggal_mulai,
@@ -204,7 +204,7 @@ if ($has_unified) {
             GROUP BY ta.nip
         ) latest ON latest.picked_id = ta.id
         LEFT JOIN papi_attempt_results par ON par.attempt_id = ta.id
-    ) papi ON papi.nip = u.nip
+    ) papi ON papi.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
 
     WHERE u.role = 'peserta'
       AND (iq.nip IS NOT NULL OR msdt.nip IS NOT NULL OR papi.nip IS NOT NULL)
@@ -276,7 +276,7 @@ if ($has_unified) {
         h2.Z,
         h2.tanggal_tes AS papi_tanggal
     FROM users u
-    " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+    " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci" : "") . "
     LEFT JOIN (
         SELECT
             ua.user_nip,
@@ -298,10 +298,10 @@ if ($has_unified) {
         JOIN iq_questions q ON ua.question_id = q.id
         JOIN iq_sections s ON q.section_id = s.id
         GROUP BY ua.user_nip
-    ) iqagg ON iqagg.user_nip = u.nip
-    LEFT JOIN iq_results h3 ON u.nip = h3.user_id $where_iq
-    LEFT JOIN hasil_msdt h1 ON u.nip = h1.nip $where_msdt
-    LEFT JOIN hasil_papi h2 ON u.nip = h2.nip $where_papi
+    ) iqagg ON iqagg.user_nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
+    LEFT JOIN iq_results h3 ON u.nip COLLATE utf8mb4_unicode_ci = h3.user_id COLLATE utf8mb4_unicode_ci $where_iq
+    LEFT JOIN hasil_msdt h1 ON u.nip COLLATE utf8mb4_unicode_ci = h1.nip COLLATE utf8mb4_unicode_ci $where_msdt
+    LEFT JOIN hasil_papi h2 ON u.nip COLLATE utf8mb4_unicode_ci = h2.nip COLLATE utf8mb4_unicode_ci $where_papi
     WHERE u.role = 'peserta'
       AND (h3.user_id IS NOT NULL OR h1.nip IS NOT NULL OR h2.nip IS NOT NULL)
     ORDER BY u.nama ASC

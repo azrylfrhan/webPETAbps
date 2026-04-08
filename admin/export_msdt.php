@@ -24,8 +24,8 @@ $query = "SELECT u.nama, u.nip,
                  h.Ds, h.Mi, h.Au, h.Co, h.Bu, h.Dv, h.Ba, h.E_dim,
                  h.dominant_model, h.tanggal_tes
           FROM hasil_msdt h
-          JOIN users u ON h.nip = u.nip
-          " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+          JOIN users u ON h.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
+          " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci" : "") . "
           WHERE u.role = 'peserta' $where_date
           ORDER BY u.nama ASC";
 $result = mysqli_query($conn, $query);
@@ -61,9 +61,9 @@ if ($has_unified) {
                '-' AS dominant_model,
                ta.tanggal_mulai AS tanggal_tes
         FROM test_attempts ta
-        JOIN users u ON u.nip = ta.nip
+        JOIN users u ON u.nip COLLATE utf8mb4_unicode_ci = ta.nip COLLATE utf8mb4_unicode_ci
         LEFT JOIN msdt_attempt_results mar ON mar.attempt_id = ta.id
-        " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+        " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci" : "") . "
         WHERE u.role = 'peserta' AND ta.test_type = 'msdt' AND ta.status = 'finished'
         " . (!empty($where_date) ? str_replace('h.tanggal_tes', 'ta.tanggal_mulai', $where_date) : "") . "
         ORDER BY u.nama ASC
@@ -87,9 +87,9 @@ if ($has_unified) {
                COALESCE(mar.dominant_model, '-') AS dominant_model,
                ta.tanggal_mulai AS tanggal_tes
         FROM test_attempts ta
-        JOIN users u ON u.nip = ta.nip
+        JOIN users u ON u.nip COLLATE utf8mb4_unicode_ci = ta.nip COLLATE utf8mb4_unicode_ci
         LEFT JOIN msdt_attempt_results mar ON mar.attempt_id = ta.id
-        " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+        " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci" : "") . "
         WHERE u.role = 'peserta' AND ta.test_type = 'msdt' AND ta.status = 'finished'
         " . (!empty($where_date) ? str_replace('h.tanggal_tes', 'ta.tanggal_mulai', $where_date) : "") . "
         ORDER BY u.nama ASC
@@ -106,8 +106,8 @@ if ($has_unified) {
                      h.Ds, h.Mi, h.Au, h.Co, h.Bu, h.Dv, h.Ba, h.E_dim,
                      h.dominant_model, h.tanggal_tes
               FROM hasil_msdt h
-              JOIN users u ON h.nip = u.nip
-              " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+              JOIN users u ON h.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
+              " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci" : "") . "
               WHERE u.role = 'peserta' $where_date
               ORDER BY u.nama ASC";
     $result = mysqli_query($conn, $query);

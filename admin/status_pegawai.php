@@ -213,9 +213,9 @@ $summaryResult = mysqli_query($conn, "
         SUM(CASE WHEN h1.nip IS NOT NULL THEN 1 ELSE 0 END) AS msdt_selesai,
         SUM(CASE WHEN h2.nip IS NOT NULL THEN 1 ELSE 0 END) AS papi_selesai
     FROM users u
-    LEFT JOIN hasil_msdt h1 ON u.nip = h1.nip
-    LEFT JOIN hasil_papi h2 ON u.nip = h2.nip
-    LEFT JOIN iq_test_sessions iq ON u.nip = iq.nip
+    LEFT JOIN hasil_msdt h1 ON u.nip COLLATE utf8mb4_unicode_ci = h1.nip COLLATE utf8mb4_unicode_ci
+    LEFT JOIN hasil_papi h2 ON u.nip COLLATE utf8mb4_unicode_ci = h2.nip COLLATE utf8mb4_unicode_ci
+    LEFT JOIN iq_test_sessions iq ON u.nip COLLATE utf8mb4_unicode_ci = iq.nip COLLATE utf8mb4_unicode_ci
     WHERE u.role = 'peserta'
     $where_akses
     $where_search
@@ -236,9 +236,9 @@ $result = mysqli_query($conn, "
         h2.nip  AS sudah_papi,
         iq.status AS status_iq
     FROM users u
-    LEFT JOIN hasil_msdt h1 ON u.nip = h1.nip
-    LEFT JOIN hasil_papi h2 ON u.nip = h2.nip
-    LEFT JOIN iq_test_sessions iq ON u.nip = iq.nip
+    LEFT JOIN hasil_msdt h1 ON u.nip COLLATE utf8mb4_unicode_ci = h1.nip COLLATE utf8mb4_unicode_ci
+    LEFT JOIN hasil_papi h2 ON u.nip COLLATE utf8mb4_unicode_ci = h2.nip COLLATE utf8mb4_unicode_ci
+    LEFT JOIN iq_test_sessions iq ON u.nip COLLATE utf8mb4_unicode_ci = iq.nip COLLATE utf8mb4_unicode_ci
     WHERE u.role = 'peserta'
     $where_akses
     $where_search

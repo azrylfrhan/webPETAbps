@@ -17,7 +17,7 @@ if ($nip_filter !== '') {
                                  h.Ds, h.Mi, h.Au, h.Co, h.Bu, h.Dv, h.Ba, h.E_dim,
                                  h.dominant_model, h.tanggal_tes
                           FROM hasil_msdt h
-                          JOIN users u ON h.nip = u.nip
+                          JOIN users u ON h.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
                           WHERE u.role = 'peserta' AND u.nip = ?
                           LIMIT 1");
     $stmt->bind_param('s', $nip_filter);
@@ -29,7 +29,7 @@ if ($nip_filter !== '') {
                      h.Ds, h.Mi, h.Au, h.Co, h.Bu, h.Dv, h.Ba, h.E_dim,
                      h.dominant_model, h.tanggal_tes
               FROM hasil_msdt h
-              JOIN users u ON h.nip = u.nip
+              JOIN users u ON h.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
               WHERE u.role = 'peserta'
               ORDER BY u.nama ASC";
 

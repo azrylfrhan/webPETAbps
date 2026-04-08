@@ -21,8 +21,8 @@ $query = "SELECT u.nama, u.nip,
                  " . ($has_biodata ? "TIMESTAMPDIFF(YEAR, b.tanggal_lahir, CURDATE())" : "NULL") . " AS usia,
                  u.jabatan, u.satuan_kerja, h.*
           FROM hasil_papi h
-          JOIN users u ON h.nip = u.nip
-          " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+          JOIN users u ON h.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
+          " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci" : "") . "
           WHERE u.role = 'peserta' $where_date
           ORDER BY u.nama ASC";
 $result = mysqli_query($conn, $query);
@@ -71,9 +71,9 @@ if ($has_unified) {
                COALESCE(par.Z, 0) AS Z,
                ta.tanggal_mulai AS tanggal_tes
         FROM test_attempts ta
-        JOIN users u ON u.nip = ta.nip
+        JOIN users u ON u.nip COLLATE utf8mb4_unicode_ci = ta.nip COLLATE utf8mb4_unicode_ci
         LEFT JOIN papi_attempt_results par ON par.attempt_id = ta.id
-        " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+        " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci" : "") . "
         WHERE u.role = 'peserta' AND ta.test_type = 'papi' AND ta.status = 'finished'
         " . (!empty($where_date) ? str_replace('h.tanggal_tes', 'ta.tanggal_mulai', $where_date) : "") . "
         ORDER BY u.nama ASC
@@ -104,9 +104,9 @@ if ($has_unified) {
                COALESCE(par.Z, 0) AS Z,
                ta.tanggal_mulai AS tanggal_tes
         FROM test_attempts ta
-        JOIN users u ON u.nip = ta.nip
+        JOIN users u ON u.nip COLLATE utf8mb4_unicode_ci = ta.nip COLLATE utf8mb4_unicode_ci
         LEFT JOIN papi_attempt_results par ON par.attempt_id = ta.id
-        " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+        " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci" : "") . "
         WHERE u.role = 'peserta' AND ta.test_type = 'papi' AND ta.status = 'finished'
         " . (!empty($where_date) ? str_replace('h.tanggal_tes', 'ta.tanggal_mulai', $where_date) : "") . "
         ORDER BY u.nama ASC
@@ -120,8 +120,8 @@ if ($has_unified) {
                      " . ($has_biodata ? "TIMESTAMPDIFF(YEAR, b.tanggal_lahir, CURDATE())" : "NULL") . " AS usia,
                      u.jabatan, u.satuan_kerja, h.*
               FROM hasil_papi h
-              JOIN users u ON h.nip = u.nip
-              " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip = u.nip" : "") . "
+              JOIN users u ON h.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci
+              " . ($has_biodata ? "LEFT JOIN biodata_peserta b ON b.nip COLLATE utf8mb4_unicode_ci = u.nip COLLATE utf8mb4_unicode_ci" : "") . "
               WHERE u.role = 'peserta' $where_date
               ORDER BY u.nama ASC";
     $result = mysqli_query($conn, $query);
