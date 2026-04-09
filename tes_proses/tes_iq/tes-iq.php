@@ -233,6 +233,7 @@ if ($session && $session['status'] === 'finished') {
         const USER = { nip: "<?= $nip ?>", nama: "<?= $nama ?>" };
     </script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="../../test_timer_alert.js"></script>
     <?php include __DIR__ . '/../../backend/global_page_loader.php'; ?>
     <script src="js/security.js?v=<?= $v_security ?>"></script>
     <script src="js/timer.js?v=<?= $v_timer ?>"></script>

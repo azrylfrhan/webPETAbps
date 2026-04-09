@@ -422,6 +422,8 @@ if ($testType === 'iq') {
         }
     }
 }
+
+$fallbackBackUrl = 'detail_pegawai.php?nip=' . urlencode((string)($attempt['nip'] ?? $nipParam));
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -454,7 +456,7 @@ if ($testType === 'iq') {
 <div class="ml-[260px] flex-1 p-8">
     <div class="mb-8 pb-6 border-b border-slate-200 flex items-start justify-between gap-4">
         <div>
-            <a href="detail_pegawai.php?nip=<?= urlencode($attempt['nip']) ?>" class="inline-flex items-center text-sm text-slate-500 hover:text-navy mb-4 transition-colors">← Kembali ke Detail Pegawai</a>
+            <a id="btn-back-page" href="<?= h($fallbackBackUrl) ?>" class="inline-flex items-center text-sm text-slate-500 hover:text-navy mb-4 transition-colors">← Kembali ke Halaman Sebelumnya</a>
             <h1 class="text-2xl font-extrabold text-navy tracking-tight"><?= h($title ?: 'Detail Jawaban') ?></h1>
             <p class="text-slate-500 text-sm mt-1"><?= h($attempt['nama']) ?> · <?= h(strtoupper($testType)) ?> · Percobaan #<?= h($attempt['attempt_number'] ?? '-') ?></p>
         </div>
@@ -722,5 +724,35 @@ if ($testType === 'iq') {
         <?php endif; ?>
     </div>
 </div>
+<script>
+(function () {
+    const backBtn = document.getElementById('btn-back-page');
+    if (!backBtn) return;
+
+    backBtn.addEventListener('click', function (event) {
+        event.preventDefault();
+
+        if (window.history.length > 1) {
+            window.history.back();
+            return;
+        }
+
+        const referrer = document.referrer || '';
+        if (referrer) {
+            try {
+                const refUrl = new URL(referrer);
+                if (refUrl.origin === window.location.origin) {
+                    window.location.href = refUrl.pathname + refUrl.search + refUrl.hash;
+                    return;
+                }
+            } catch (error) {
+                // Abaikan URL referrer yang tidak valid dan pakai fallback.
+            }
+        }
+
+        window.location.href = backBtn.getAttribute('href') || 'hasil_peserta.php';
+    });
+})();
+</script>
 </body>
 </html>

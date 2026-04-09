@@ -99,6 +99,8 @@ body{font-family:'Plus Jakarta Sans', sans-serif;background:#f1f5f9;margin:0;col
 
 </style>
 
+<script src="../../test_timer_alert.js"></script>
+
 </head>
 
 <body>
@@ -207,6 +209,10 @@ fetch("api/get_memory.php")
 
 let time = 120;
 
+if (window.TestTimerAlert) {
+    window.TestTimerAlert.reset('iq-memory');
+}
+
 let timer = setInterval(function(){
 
     let m = Math.floor(time / 60);
@@ -214,6 +220,17 @@ let timer = setInterval(function(){
 
     document.getElementById("timer").innerText =
         m + ":" + (s < 10 ? "0" : "") + s;
+
+    if (window.TestTimerAlert) {
+        window.TestTimerAlert.warn({
+            key: 'iq-memory',
+            remaining: time,
+            threshold: 30,
+            title: 'Waktu Menghafal Hampir Habis',
+            message: 'Sisa waktu hafalan tinggal 30 detik. Segera lanjut ke soal berikutnya.',
+            type: 'info'
+        });
+    }
 
     time--;
 

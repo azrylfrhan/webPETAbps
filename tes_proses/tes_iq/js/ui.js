@@ -39,10 +39,7 @@ function formatInstructionText(text, sectionUrutan = 0) {
                 'Bandingkan semua pilihan jawaban.',
                 'Pilih kata yang paling sesuai secara makna.',
                 'Setiap soal hanya memiliki satu jawaban benar.'
-            ],
-            exampleTitle: 'Contoh:',
-            exampleQuestion: 'Seekor kuda mempunyai kesamaan terbanyak dengan seekor ...',
-            exampleAnswer: 'Jawaban yang benar: C. keledai.'
+            ]
         },
         2: {
             intro: 'Pada bagian ini, terdapat lima kata. Empat kata memiliki kesamaan, sedangkan satu kata berbeda sendiri.',
@@ -130,16 +127,7 @@ function formatInstructionText(text, sectionUrutan = 0) {
                 </ol>
             </div>`;
 
-        const exampleCards = clean.exampleQuestion ? `
-            <div class="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4 shadow-sm">
-                <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-700">Contoh</p>
-                <div class="mt-3 space-y-2 text-sm leading-relaxed text-slate-700 sm:text-[15px]">
-                    <p>${escapeHtml(clean.exampleQuestion)}</p>
-                    ${clean.exampleAnswer ? `<p class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-800">${escapeHtml(clean.exampleAnswer)}</p>` : ''}
-                </div>
-            </div>` : '';
-
-        return `<div class="space-y-3">${introCard}${stepsCard}${exampleCards}</div>`;
+        return `<div class="space-y-3">${introCard}${stepsCard}</div>`;
     }
 
     if (lines.length === 0) {
@@ -282,8 +270,8 @@ renderInstruction(section, example){
                     <div class="rounded-[2rem] border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,30,60,0.08)] overflow-hidden">
                         <div class="bg-gradient-to-r from-[#0f1e3c] via-[#1b3f74] to-[#5b9df3] px-5 py-5 text-white sm:px-8">
                             <p class="text-[11px] font-bold uppercase tracking-[0.28em] text-blue-100">Petunjuk Pengerjaan</p>
-                            <h2 class="mt-2 text-2xl font-black sm:text-4xl">Instruksi Tes 1</h2>
-                            <p class="mt-2 text-sm text-blue-100/90 sm:text-base">Bagian ${section.urutan}: ${escapeHtml(section.nama_bagian)}</p>
+                            <h2 class="mt-2 text-2xl font-black sm:text-4xl">Instruksi Bagian ${section.urutan}</h2>
+                            <p class="mt-2 text-sm text-blue-100/90 sm:text-base">${escapeHtml(section.nama_bagian)}</p>
                         </div>
                         <div class="px-5 py-6 sm:px-8 sm:py-8">
                             <div class="mb-6 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-relaxed text-slate-600 sm:text-[15px]">
@@ -741,7 +729,7 @@ renderQuestion(data, nomor, total, navigatorHtml = "", actionHtml = "", answered
                     answeredQuestionIds.add(data.id);
                     touchedQuestionNumbers.add(globalQuestionNumber);
                     // Re-render untuk update button state
-                    loadQuestion(globalQuestionNumber);
+                    loadQuestion(globalQuestionNumber, { silent: true });
                 });
         });
         inputEl.addEventListener("keydown", function(e) {

@@ -175,6 +175,7 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
         .notification-btn.secondary:hover { background: #cbd5e1; }
 
     </style>
+    <script src="test_timer_alert.js"></script>
 </head>
 <body class="min-h-screen overflow-x-hidden flex flex-col">
 
@@ -435,12 +436,25 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
             let saved = localStorage.getItem(STORAGE_KEY);
             let remaining = saved ? parseInt(saved) : WAKTU_DETIK;
             if (isNaN(remaining) || remaining <= 0) remaining = WAKTU_DETIK;
+            if (window.TestTimerAlert) {
+                window.TestTimerAlert.reset('msdt-main');
+            }
             updateDisplay(remaining);
 
             timerInterval = setInterval(() => {
                 remaining--;
                 localStorage.setItem(STORAGE_KEY, remaining);
                 updateDisplay(remaining);
+                if (window.TestTimerAlert) {
+                    window.TestTimerAlert.warn({
+                        key: 'msdt-main',
+                        remaining: remaining,
+                        threshold: 300,
+                        title: 'Waktu Hampir Habis',
+                        message: 'Sisa waktu tinggal 5 menit. Periksa jawaban Anda sekarang.',
+                        type: 'info'
+                    });
+                }
 
                 if (remaining <= 0) {
                     clearInterval(timerInterval);

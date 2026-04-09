@@ -399,8 +399,11 @@ function startExam() {
    LOAD QUESTION
 ========================================================= */
 
-function loadQuestion(questionNumber = globalQuestionNumber) {
-    showTransitionLoader('Memuat soal...');
+function loadQuestion(questionNumber = globalQuestionNumber, options = {}) {
+    const silent = Boolean(options && options.silent);
+    if (!silent) {
+        showTransitionLoader('Memuat soal...');
+    }
     globalQuestionNumber = questionNumber;
     
     // Jika user mencoba melompat ke soal melebihi total soal (ingin lanjut section)
@@ -417,13 +420,17 @@ function loadQuestion(questionNumber = globalQuestionNumber) {
                 globalQuestionNumber = unansweredList[0];
                 // Continue dengan normal fetch flow di bawah
             } else {
-                hideTransitionLoader();
+                if (!silent) {
+                    hideTransitionLoader();
+                }
                 return;
             }
         } else {
             // Jika sudah fully answered, boleh lanjut ke section berikutnya
             nextSection();
-            hideTransitionLoader();
+            if (!silent) {
+                hideTransitionLoader();
+            }
             return;
         }
     }
@@ -462,7 +469,11 @@ function loadQuestion(questionNumber = globalQuestionNumber) {
             );
         })
         .catch(err => console.error("Error loading question:", err))
-        .finally(() => hideTransitionLoader());
+        .finally(() => {
+            if (!silent) {
+                hideTransitionLoader();
+            }
+        });
 }
 
 function getAnsweredQuestionCount() {
@@ -595,7 +606,7 @@ async function saveAnswerOnly(questionId, label) {
         console.error("Error saving answer:", e);
     }
     // Re-render untuk update button state
-    loadQuestion(globalQuestionNumber);
+    loadQuestion(globalQuestionNumber, { silent: true });
 }
 
 async function answerAndNext(questionId, label) {
@@ -845,10 +856,25 @@ function nextSection() {
    TIMER
 ========================================================= */
 
+function getTimerWarningThreshold(seconds) {
+    if (seconds <= 180) {
+        return 30;
+    }
+
+    return 300;
+}
+
 function startTimer(seconds) {
     remainingTime = seconds;
     clearInterval(timerInterval);
     timerInterval = null;
+
+    const timerWarningKey = `iq-${globalSectionId || 'timer'}`;
+    const warningThreshold = getTimerWarningThreshold(seconds);
+
+    if (window.TestTimerAlert) {
+        window.TestTimerAlert.reset(timerWarningKey);
+    }
 
     document.getElementById("timer-box").classList.remove("hidden");
 
@@ -860,6 +886,19 @@ function startTimer(seconds) {
         const s = remainingTime % 60;
         document.getElementById("timer-display").innerText =
             String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+
+        if (window.TestTimerAlert) {
+            window.TestTimerAlert.warn({
+                key: timerWarningKey,
+                remaining: remainingTime,
+                threshold: warningThreshold,
+                title: 'Waktu Hampir Habis',
+                        message: warningThreshold <= 30
+                            ? 'Sisa waktu tinggal 30 detik. Segera selesaikan jawaban Anda.'
+                            : 'Sisa waktu tinggal 5 menit. Periksa jawaban Anda sekarang.',
+                type: 'info'
+            });
+        }
 
         if (remainingTime <= 0) {
             clearInterval(timerInterval);
