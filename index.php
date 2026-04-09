@@ -67,9 +67,63 @@ $logoPath = $basePath . '/images/logobps.png';
             0% { transform: translate3d(0, 0, 0) scale(1); }
             100% { transform: translate3d(2.5%, -2%, 0) scale(1.06); }
         }
+
+        #login-loading-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 30, 60, 0.38);
+            backdrop-filter: blur(3px);
+        }
+
+        #login-loading-overlay.show {
+            display: flex;
+        }
+
+        #login-loading-overlay .loader-card {
+            min-width: 260px;
+            border-radius: 14px;
+            border: 1px solid #dbe3ef;
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 18px 42px rgba(15, 30, 60, 0.22);
+            padding: 14px 18px;
+            text-align: center;
+        }
+
+        #login-loading-overlay .loader-spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #d7e5fb;
+            border-top-color: #0f1e3c;
+            border-radius: 999px;
+            margin: 0 auto 10px;
+            animation: login-page-loader-spin 0.9s linear infinite;
+        }
+
+        #login-loading-overlay .loader-text {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 700;
+            color: #334155;
+            letter-spacing: 0.01em;
+        }
+
+        @keyframes login-page-loader-spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="min-h-screen overflow-x-hidden bg-slate-200 font-sans">
+
+<div id="login-loading-overlay" aria-hidden="true">
+    <div class="loader-card" role="status" aria-live="polite">
+        <div class="loader-spinner"></div>
+        <p class="loader-text">Memproses login...</p>
+    </div>
+</div>
 
 <div class="min-h-screen w-full grid lg:grid-cols-5">
     <aside class="hero-panel hidden lg:flex lg:col-span-2 flex-col justify-between p-12 text-white">
@@ -175,7 +229,7 @@ $logoPath = $basePath . '/images/logobps.png';
             </div>
             <?php endif; ?>
 
-            <form action="backend/login_process.php" method="POST" class="space-y-4 sm:space-y-5">
+            <form id="login-form" action="backend/login_process.php" method="POST" class="space-y-4 sm:space-y-5">
                 <div class="auth-group">
                     <label class="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-600">NIP</label>
                     <input type="text" name="nip" placeholder="Masukkan NIP Anda" required class="w-full rounded-md border border-gray-200 px-4 py-3.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:py-3">
@@ -188,7 +242,7 @@ $logoPath = $basePath . '/images/logobps.png';
                 </div>
 
                 <div class="pt-2">
-                    <button type="submit" class="w-full rounded-md bg-blue-600 px-4 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-blue-700 sm:py-3">
+                    <button id="login-submit-btn" type="submit" class="w-full rounded-md bg-blue-600 px-4 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70 sm:py-3">
                         Login
                     </button>
                 </div>
@@ -203,6 +257,9 @@ $logoPath = $basePath . '/images/logobps.png';
 <script>
     const btnToggle = document.querySelector('#btn_toggle_login');
     const inputPass = document.querySelector('#pass_login');
+    const loginForm = document.getElementById('login-form');
+    const loginSubmitBtn = document.getElementById('login-submit-btn');
+    const loginLoadingOverlay = document.getElementById('login-loading-overlay');
 
     if (btnToggle && inputPass) {
         btnToggle.addEventListener('click', function() {
@@ -213,6 +270,28 @@ $logoPath = $basePath . '/images/logobps.png';
                 inputPass.type = 'password';
                 this.classList.replace('fi-rr-eye-crossed', 'fi-rr-eye');
             }
+        });
+    }
+
+    if (loginForm && loginSubmitBtn && loginLoadingOverlay) {
+        let submitting = false;
+
+        loginForm.addEventListener('submit', function () {
+            if (submitting) {
+                return false;
+            }
+
+            submitting = true;
+            loginSubmitBtn.disabled = true;
+            loginSubmitBtn.textContent = 'Memproses...';
+            loginLoadingOverlay.classList.add('show');
+        });
+
+        window.addEventListener('pageshow', function () {
+            submitting = false;
+            loginSubmitBtn.disabled = false;
+            loginSubmitBtn.textContent = 'Login';
+            loginLoadingOverlay.classList.remove('show');
         });
     }
 </script>
