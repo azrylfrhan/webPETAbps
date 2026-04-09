@@ -857,11 +857,7 @@ function nextSection() {
 ========================================================= */
 
 function getTimerWarningThreshold(seconds) {
-    if (seconds <= 180) {
-        return 30;
-    }
-
-    return 300;
+    return 60;
 }
 
 function startTimer(seconds) {
@@ -893,9 +889,7 @@ function startTimer(seconds) {
                 remaining: remainingTime,
                 threshold: warningThreshold,
                 title: 'Waktu Hampir Habis',
-                        message: warningThreshold <= 30
-                            ? 'Sisa waktu tinggal 30 detik. Segera selesaikan jawaban Anda.'
-                            : 'Sisa waktu tinggal 5 menit. Periksa jawaban Anda sekarang.',
+                        message: 'Sisa waktu tinggal 1 menit. Segera selesaikan jawaban Anda.',
                 type: 'info'
             });
         }

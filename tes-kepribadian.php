@@ -449,9 +449,9 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
                     window.TestTimerAlert.warn({
                         key: 'msdt-main',
                         remaining: remaining,
-                        threshold: 300,
+                        threshold: 60,
                         title: 'Waktu Hampir Habis',
-                        message: 'Sisa waktu tinggal 5 menit. Periksa jawaban Anda sekarang.',
+                        message: 'Sisa waktu tinggal 1 menit. Periksa jawaban Anda sekarang.',
                         type: 'info'
                     });
                 }
@@ -471,7 +471,7 @@ define('WAKTU_DETIK', 30 * 60); // 30 menit
             const s   = seconds % 60;
             const el  = document.getElementById('timer-display');
             el.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-            if (seconds <= 300) el.classList.add('timer-warning');
+            if (seconds <= 60) el.classList.add('timer-warning');
             else el.classList.remove('timer-warning');
         }
 

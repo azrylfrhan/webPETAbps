@@ -22,7 +22,7 @@
             const settings = options || {};
             const key = normalizeKey(settings.key);
             const remaining = Number(settings.remaining);
-            const threshold = Number.isFinite(Number(settings.threshold)) ? Number(settings.threshold) : 300;
+            const threshold = Number.isFinite(Number(settings.threshold)) ? Number(settings.threshold) : 60;
 
             if (!Number.isFinite(remaining)) {
                 return false;

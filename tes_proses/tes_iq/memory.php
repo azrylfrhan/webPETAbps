@@ -225,9 +225,9 @@ let timer = setInterval(function(){
         window.TestTimerAlert.warn({
             key: 'iq-memory',
             remaining: time,
-            threshold: 30,
+            threshold: 60,
             title: 'Waktu Menghafal Hampir Habis',
-            message: 'Sisa waktu hafalan tinggal 30 detik. Segera lanjut ke soal berikutnya.',
+            message: 'Sisa waktu hafalan tinggal 1 menit. Segera lanjut ke soal berikutnya.',
             type: 'info'
         });
     }
